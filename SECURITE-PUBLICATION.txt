@@ -1,0 +1,10 @@
+SECURITE DU SITE LL CARRELAGE
+
+1. Publier le site uniquement avec une adresse HTTPS valide.
+2. Conserver le fichier _headers lors de la mise en ligne.
+3. Ne jamais placer de mot de passe, cle API ou document client dans ce dossier.
+4. Maintenir les fichiers du site et l'hebergement a jour.
+5. Apres publication, verifier les en-tetes avec l'observatoire HTTP de MDN.
+
+Le fichier _headers est utilise notamment par Netlify et Cloudflare Pages.
+Si l'hebergeur ne le reconnait pas, reporter ces memes en-tetes dans son panneau de configuration.

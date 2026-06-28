@@ -1,0 +1,22 @@
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; manifest-src 'self'; upgrade-insecure-requests
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+  Strict-Transport-Security: max-age=31536000
+  X-Permitted-Cross-Domain-Policies: none
+
+/index.html
+  Cache-Control: no-cache
+
+/script.js
+  Content-Type: text/javascript; charset=utf-8
+  Cache-Control: public, max-age=3600
+
+/styles.css
+  Content-Type: text/css; charset=utf-8
+  Cache-Control: public, max-age=3600
+
