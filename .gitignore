@@ -1,0 +1,48 @@
+# Dépendances et sorties de build
+node_modules/
+dist/
+build/
+out/
+coverage/
+
+# Archives et sauvegardes
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.bak
+*.backup
+*.old
+*~
+
+# Fichiers temporaires et journaux
+*.tmp
+*.temp
+*.log
+*.swp
+*.swo
+.cache/
+.tmp/
+tmp/
+temp/
+
+# Fichiers système
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Éditeurs
+.idea/
+.vscode/
+*.code-workspace
+
+# Configuration locale sensible
+.env
+.env.*
+!.env.example
+
+# Anciens éléments locaux non utilisés par le site publié
+/carte-isere.png
+/llcarrelage site internet/
