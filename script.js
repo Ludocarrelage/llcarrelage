@@ -3,12 +3,22 @@ const navLinks = document.getElementById("navLinks");
 const navbar = document.querySelector(".navbar");
 const leadForm = document.getElementById("leadForm");
 const calculatorForm = document.getElementById("calculatorForm");
+const galleryItems = Array.from(document.querySelectorAll("[data-gallery-index]"));
+const galleryLightbox = document.getElementById("galleryLightbox");
+const galleryLightboxImage = document.getElementById("galleryLightboxImage");
+const galleryLightboxCaption = document.getElementById("galleryLightboxCaption");
+const galleryLightboxCounter = document.getElementById("galleryLightboxCounter");
+const galleryClose = document.getElementById("galleryClose");
+const galleryPrevious = document.getElementById("galleryPrev");
+const galleryNext = document.getElementById("galleryNext");
+let galleryCurrentIndex = 0;
 
 function closeMenu() {
   if (!menuBtn || !navLinks) return;
   menuBtn.classList.remove("active");
   navLinks.classList.remove("active");
   menuBtn.setAttribute("aria-expanded", "false");
+  menuBtn.setAttribute("aria-label", "Ouvrir le menu");
   document.body.classList.remove("menu-open");
 }
 
@@ -17,6 +27,7 @@ if (menuBtn && navLinks) {
     const isOpen = navLinks.classList.toggle("active");
     menuBtn.classList.toggle("active", isOpen);
     menuBtn.setAttribute("aria-expanded", String(isOpen));
+    menuBtn.setAttribute("aria-label", isOpen ? "Fermer le menu" : "Ouvrir le menu");
     document.body.classList.toggle("menu-open", isOpen);
   });
 }
@@ -61,7 +72,7 @@ function sendLead(event) {
 
   const text = [
     `Bonjour LL Carrelage, je m'appelle ${name}.`,
-    `Telephone : ${phone}`,
+    `Téléphone : ${phone}`,
     `Projet : ${project}`,
     message ? `Message : ${message}` : "Pouvez-vous me recontacter ?"
   ].join("\n");
@@ -87,6 +98,37 @@ function limitText(value, maxLength) {
 
 function isValidPhone(value) {
   return /^[0-9+().\s-]{8,25}$/.test(String(value || "").trim());
+}
+
+function showGalleryImage(index) {
+  if (!galleryItems.length || !galleryLightboxImage) return;
+  galleryCurrentIndex = (index + galleryItems.length) % galleryItems.length;
+  const item = galleryItems[galleryCurrentIndex];
+  const image = item.querySelector("img");
+
+  galleryLightboxImage.src = image?.getAttribute("src") || "";
+  galleryLightboxImage.alt = image?.alt || "Réalisation LL Carrelage";
+  if (galleryLightboxCaption) galleryLightboxCaption.textContent = item.dataset.galleryCaption || "Réalisation LL Carrelage";
+  if (galleryLightboxCounter) galleryLightboxCounter.textContent = `${galleryCurrentIndex + 1} / ${galleryItems.length}`;
+}
+
+function openGallery(index) {
+  if (!galleryLightbox) return;
+  showGalleryImage(index);
+  if (typeof galleryLightbox.showModal === "function") {
+    galleryLightbox.showModal();
+  } else {
+    galleryLightbox.setAttribute("open", "");
+  }
+}
+
+function closeGallery() {
+  if (!galleryLightbox) return;
+  if (typeof galleryLightbox.close === "function") {
+    galleryLightbox.close();
+  } else {
+    galleryLightbox.removeAttribute("open");
+  }
 }
 
 // Tarifs indicatifs faciles à ajuster au même endroit.
@@ -291,7 +333,7 @@ function restartCalculator() {
 }
 
 const animatedElements = document.querySelectorAll(
-  ".section, .stats, .card, .gallery-empty, .review-box, .calculator-box, .form"
+  ".section, .stats, .card, .gallery-item, .review-box, .calculator-box, .form"
 );
 
 if ("IntersectionObserver" in window) {
@@ -359,3 +401,20 @@ if (calculatorForm) {
     }
   });
 }
+
+galleryItems.forEach((item, index) => {
+  item.addEventListener("click", () => openGallery(index));
+});
+
+galleryClose?.addEventListener("click", closeGallery);
+galleryPrevious?.addEventListener("click", () => showGalleryImage(galleryCurrentIndex - 1));
+galleryNext?.addEventListener("click", () => showGalleryImage(galleryCurrentIndex + 1));
+
+galleryLightbox?.addEventListener("click", (event) => {
+  if (event.target === galleryLightbox) closeGallery();
+});
+
+galleryLightbox?.addEventListener("keydown", (event) => {
+  if (event.key === "ArrowLeft") showGalleryImage(galleryCurrentIndex - 1);
+  if (event.key === "ArrowRight") showGalleryImage(galleryCurrentIndex + 1);
+});
