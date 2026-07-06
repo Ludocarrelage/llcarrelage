@@ -1898,86 +1898,6 @@ textarea {
   margin-top: 22px;
 }
 
-.before-after-project {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
-  margin-bottom: 42px;
-  padding-bottom: 42px;
-}
-
-.before-after-heading {
-  margin-bottom: 24px;
-  max-width: 720px;
-}
-
-.before-after-heading h3 {
-  color: #fff;
-  font-size: clamp(1.5rem, 3vw, 2.35rem);
-  line-height: 1.1;
-}
-
-.before-after-heading > p:last-child {
-  color: rgba(255, 255, 255, 0.68);
-  margin-top: 10px;
-}
-
-.before-after-grid {
-  display: grid;
-  gap: 16px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  max-width: 760px;
-  width: 100%;
-}
-
-.before-after-item {
-  margin: 0;
-  min-width: 0;
-  width: 100%;
-}
-
-.before-after-media {
-  aspect-ratio: 3 / 4;
-  background: #24211d;
-  border: 1px solid rgba(245, 138, 76, 0.3);
-  border-radius: var(--radius);
-  overflow: hidden;
-  position: relative;
-}
-
-.before-after-media img {
-  display: block;
-  height: 100%;
-  max-width: 100%;
-  object-fit: cover;
-  transform: none;
-  transition: none;
-  width: 100%;
-}
-
-.before-after-media span {
-  background: rgba(21, 21, 21, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.28);
-  border-radius: 999px;
-  color: #fff;
-  font-size: 0.82rem;
-  font-weight: 900;
-  left: 16px;
-  padding: 7px 12px;
-  position: absolute;
-  text-transform: uppercase;
-  top: 16px;
-}
-
-.before-after-item:last-child .before-after-media span {
-  background: var(--accent);
-  border-color: var(--accent-light);
-}
-
-.before-after-item figcaption {
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 0.9rem;
-  padding: 10px 4px 0;
-}
-
 .gallery-placeholder {
   background: rgba(255, 255, 255, 0.045);
   border: 1px dashed rgba(245, 138, 76, 0.38);
@@ -2076,33 +1996,6 @@ textarea {
 
   .gallery-planned {
     grid-template-columns: 1fr;
-  }
-
-  .before-after-project {
-    margin-bottom: 32px;
-    padding-bottom: 32px;
-  }
-
-  .before-after-grid {
-    gap: 10px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .before-after-media {
-    border-radius: 12px;
-  }
-
-  .before-after-media span {
-    font-size: 0.68rem;
-    left: 8px;
-    padding: 5px 8px;
-    top: 8px;
-  }
-
-  .before-after-item figcaption {
-    font-size: 0.76rem;
-    line-height: 1.35;
-    padding: 8px 2px 0;
   }
 
   .gallery-placeholder {
