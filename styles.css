@@ -1922,17 +1922,18 @@ textarea {
 .recent-work-card {
   margin: 0;
   min-width: 0;
+  overflow: hidden;
   width: 100%;
 }
 
 .recent-work-card img {
-  aspect-ratio: 4 / 5;
   border: 1px solid rgba(245, 138, 76, 0.24);
   border-radius: 8px;
   display: block;
-  height: auto;
+  height: 460px;
   max-width: 100%;
   object-fit: cover;
+  object-position: center;
   width: 100%;
 }
 
@@ -2019,6 +2020,10 @@ textarea {
   .recent-work-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .recent-work-card img {
+    height: 400px;
+  }
 }
 
 @media (max-width: 560px) {
@@ -2048,6 +2053,10 @@ textarea {
 
   .recent-work-grid {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .recent-work-card img {
+    height: clamp(260px, 65vw, 340px);
   }
 
   .gallery-placeholder {
