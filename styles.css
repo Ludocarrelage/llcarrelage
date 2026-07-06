@@ -1898,6 +1898,80 @@ textarea {
   margin-top: 22px;
 }
 
+.before-after-project {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  margin-bottom: 42px;
+  padding-bottom: 42px;
+}
+
+.before-after-heading {
+  margin-bottom: 24px;
+  max-width: 720px;
+}
+
+.before-after-heading h3 {
+  color: #fff;
+  font-size: clamp(1.5rem, 3vw, 2.35rem);
+  line-height: 1.1;
+}
+
+.before-after-heading > p:last-child {
+  color: rgba(255, 255, 255, 0.68);
+  margin-top: 10px;
+}
+
+.before-after-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 980px;
+}
+
+.before-after-item {
+  margin: 0;
+}
+
+.before-after-media {
+  aspect-ratio: 3 / 4;
+  background: #24211d;
+  border: 1px solid rgba(245, 138, 76, 0.3);
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+}
+
+.before-after-media img {
+  display: block;
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.before-after-media span {
+  background: rgba(21, 21, 21, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 900;
+  left: 16px;
+  padding: 7px 12px;
+  position: absolute;
+  text-transform: uppercase;
+  top: 16px;
+}
+
+.before-after-item:last-child .before-after-media span {
+  background: var(--accent);
+  border-color: var(--accent-light);
+}
+
+.before-after-item figcaption {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.9rem;
+  padding: 10px 4px 0;
+}
+
 .gallery-placeholder {
   background: rgba(255, 255, 255, 0.045);
   border: 1px dashed rgba(245, 138, 76, 0.38);
@@ -1929,10 +2003,6 @@ textarea {
 .gallery-placeholder small {
   color: rgba(255, 255, 255, 0.58);
   margin-top: 3px;
-}
-
-.mobile-call {
-  display: none;
 }
 
 @media (max-width: 1200px) and (min-width: 901px) {
@@ -2002,6 +2072,15 @@ textarea {
     grid-template-columns: 1fr;
   }
 
+  .before-after-project {
+    margin-bottom: 32px;
+    padding-bottom: 32px;
+  }
+
+  .before-after-grid {
+    grid-template-columns: 1fr;
+  }
+
   .gallery-placeholder {
     align-items: center;
     grid-template-columns: 42px minmax(0, 1fr);
@@ -2016,38 +2095,6 @@ textarea {
 
   .gallery-placeholder strong {
     align-self: end;
-  }
-
-  .mobile-call {
-    align-items: center;
-    background: var(--ink);
-    border: 1px solid rgba(245, 138, 76, 0.7);
-    border-radius: 50%;
-    bottom: 82px;
-    box-shadow: 0 10px 24px rgba(21, 21, 21, 0.25);
-    color: #fff;
-    display: flex;
-    height: 50px;
-    justify-content: center;
-    position: fixed;
-    right: 17px;
-    width: 50px;
-    z-index: 120;
-  }
-
-  .mobile-call svg {
-    fill: none;
-    height: 22px;
-    stroke: currentColor;
-    stroke-linecap: round;
-    stroke-linejoin: round;
-    stroke-width: 2;
-    width: 22px;
-  }
-
-  .mobile-call:hover,
-  .mobile-call:focus-visible {
-    background: var(--accent);
   }
 
   .whatsapp {
