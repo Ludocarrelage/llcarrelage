@@ -1925,10 +1925,13 @@ textarea {
   gap: 16px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   max-width: 760px;
+  width: 100%;
 }
 
 .before-after-item {
   margin: 0;
+  min-width: 0;
+  width: 100%;
 }
 
 .before-after-media {
@@ -1943,6 +1946,7 @@ textarea {
 .before-after-media img {
   display: block;
   height: 100%;
+  max-width: 100%;
   object-fit: cover;
   transform: none;
   transition: none;
@@ -2081,7 +2085,10 @@ textarea {
 
   .before-after-grid {
     gap: 10px;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
+    margin-left: auto;
+    margin-right: auto;
+    max-width: 360px;
   }
 
   .before-after-media {
