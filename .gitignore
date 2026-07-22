@@ -42,6 +42,7 @@ $RECYCLE.BIN/
 .env
 .env.*
 !.env.example
+/api/config.php
 
 # Anciens éléments locaux non utilisés par le site publié
 /carte-isere.png

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="LL Carrelage, artisan carreleur à Pont-Évêque et Vienne. Pose soignée en Isère, Rhône, Lyon, Bourgoin-Jallieu et alentours. Devis gratuit." />
   <meta name="referrer" content="no-referrer" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self';" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'self'; media-src 'none'; object-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self';" />
   <title>LL Carrelage | Carreleur à Pont-Évêque et Vienne</title>
   <link rel="stylesheet" href="styles.css?v=20260706" />
 </head>
@@ -180,6 +180,10 @@
           <div class="calculator-intro">
             <strong>Demande rapide et estimation personnalisée</strong>
             <span>Vos informations restent dans votre demande WhatsApp et ne sont pas enregistrées sur le site.</span>
+          </div>
+          <div class="calculator-honeypot" aria-hidden="true">
+            <label for="calcWebsite">Site internet</label>
+            <input type="text" id="calcWebsite" name="website" tabindex="-1" autocomplete="off" />
           </div>
 
           <div class="calculator-progress" aria-label="Progression du calculateur">
@@ -507,7 +511,7 @@
     <a href="#devis">Demander un devis</a>
   </footer>
 
-  <script src="script.js"></script>
+  <script src="script.js?v=20260722"></script>
 </body>
 </html>
 

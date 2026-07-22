@@ -832,6 +832,16 @@ textarea {
   color: rgba(255, 255, 255, 0.72);
 }
 
+.calculator-honeypot {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .calculator-form label {
   color: var(--ink);
   font-weight: 900;
@@ -1006,6 +1016,28 @@ textarea {
   line-height: 1.45;
 }
 
+.calculator-field.is-invalid {
+  animation: calculatorInvalidPulse 0.36s ease;
+}
+
+.calculator-field.is-invalid input,
+.calculator-field.is-invalid select,
+.calculator-field.is-invalid textarea,
+.calculator-field.is-invalid .surface-field,
+.calculator-field.is-invalid .calculator-choices label {
+  border-color: #c9432f;
+  box-shadow: 0 0 0 4px rgba(201, 67, 47, 0.14);
+}
+
+.calculator-field.is-invalid .calculator-choices label {
+  background: #fff8f6;
+}
+
+.calculator-field.is-invalid legend,
+.calculator-field.is-invalid > span {
+  color: #9f2f20;
+}
+
 .calculator-choices {
   display: grid;
   gap: 10px;
@@ -1095,6 +1127,13 @@ textarea {
 @keyframes calculatorStepIn {
   from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes calculatorInvalidPulse {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(4px); }
+  75% { transform: translateX(-2px); }
 }
 
 .calculator-notes {
@@ -1539,6 +1578,7 @@ textarea {
   *,
   *::before,
   *::after {
+    animation-duration: 0.01ms !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }

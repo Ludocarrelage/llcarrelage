@@ -158,6 +158,9 @@ const calculatorRestart = document.getElementById("calcRestart");
 const calculatorError = document.getElementById("calcFormError");
 let calculatorStepIndex = 0;
 let calculatorHasEstimate = false;
+const stepOneNotificationEndpoint = "api/notify-step1.php";
+const stepOneNotificationStorageKey = "llCarrelageStep1Notification";
+const calculatorInvalidClass = "is-invalid";
 
 function getSelectLabel(id) {
   const select = document.getElementById(id);
@@ -171,6 +174,91 @@ function getRadioAnswer(name) {
 function setCalculatorText(id, value) {
   const node = document.getElementById(id);
   if (node) node.textContent = value;
+}
+
+function getCalculatorField(control) {
+  return control?.closest(".calculator-field") || control;
+}
+
+function getCalculatorHeaderOffset() {
+  const headerHeight = navbar?.getBoundingClientRect().height || 0;
+  return headerHeight + 22;
+}
+
+function clearCalculatorInvalidState(control) {
+  if (!control) return;
+  const field = getCalculatorField(control);
+  field?.classList.remove(calculatorInvalidClass);
+
+  if (control.name && (control.type === "radio" || control.type === "checkbox")) {
+    document.querySelectorAll(`input[name="${control.name}"]`).forEach((input) => {
+      input.removeAttribute("aria-invalid");
+    });
+    return;
+  }
+
+  control.removeAttribute("aria-invalid");
+}
+
+function clearAllCalculatorInvalidStates() {
+  calculatorForm?.querySelectorAll(`.${calculatorInvalidClass}`).forEach((field) => {
+    field.classList.remove(calculatorInvalidClass);
+  });
+  calculatorForm?.querySelectorAll("[aria-invalid]").forEach((control) => {
+    control.removeAttribute("aria-invalid");
+  });
+}
+
+function markCalculatorInvalidControl(control) {
+  if (!control) return;
+  const field = getCalculatorField(control);
+  field?.classList.remove(calculatorInvalidClass);
+  void field?.offsetWidth;
+  field?.classList.add(calculatorInvalidClass);
+
+  if (control.name && (control.type === "radio" || control.type === "checkbox")) {
+    document.querySelectorAll(`input[name="${control.name}"]`).forEach((input) => {
+      input.setAttribute("aria-invalid", "true");
+    });
+    return;
+  }
+
+  control.setAttribute("aria-invalid", "true");
+}
+
+function focusCalculatorControl(control) {
+  if (!control) return;
+
+  try {
+    control.focus({ preventScroll: true });
+  } catch (error) {
+    control.focus();
+  }
+}
+
+function scrollToCalculatorControl(control) {
+  const target = getCalculatorField(control);
+  if (!target) return;
+
+  target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+
+  window.setTimeout(() => {
+    const targetTop = target.getBoundingClientRect().top + window.pageYOffset - getCalculatorHeaderOffset();
+    window.scrollTo({ top: Math.max(targetTop, 0), behavior: "smooth" });
+  }, 80);
+
+  window.setTimeout(() => {
+    focusCalculatorControl(control);
+  }, 260);
+
+  window.setTimeout(() => {
+    const rect = target.getBoundingClientRect();
+    const headerOffset = getCalculatorHeaderOffset();
+    if (rect.top < headerOffset || rect.bottom > window.innerHeight - 24) {
+      const targetTop = target.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+      window.scrollTo({ top: Math.max(targetTop, 0), behavior: "smooth" });
+    }
+  }, 620);
 }
 
 function formatEuros(value) {
@@ -203,6 +291,72 @@ function getCalculatorData() {
     email: limitText(document.getElementById("calcEmail")?.value, 120),
     message: limitText(document.getElementById("calcMessage")?.value, 700),
   };
+}
+
+function getStepOneNotificationFingerprint(data) {
+  return [
+    data.projectKey,
+    data.surface,
+    data.city.toLowerCase(),
+    data.phone.replace(/\s+/g, ""),
+  ].join("|");
+}
+
+function getStoredStepOneNotification() {
+  try {
+    return sessionStorage.getItem(stepOneNotificationStorageKey);
+  } catch (error) {
+    console.warn("SessionStorage indisponible pour la notification étape 1.", error);
+    return null;
+  }
+}
+
+function storeStepOneNotification(fingerprint) {
+  try {
+    sessionStorage.setItem(stepOneNotificationStorageKey, fingerprint);
+  } catch (error) {
+    console.warn("SessionStorage indisponible pour la notification étape 1.", error);
+  }
+}
+
+function notifyStepOneCompleted() {
+  const data = getCalculatorData();
+  if (!data.projectKey || !data.surface || !data.city || !data.phone) return;
+
+  const fingerprint = getStepOneNotificationFingerprint(data);
+  const previousNotification = getStoredStepOneNotification();
+  if (previousNotification === fingerprint) return;
+
+  storeStepOneNotification(fingerprint);
+
+  fetch(stepOneNotificationEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      project: data.project,
+      projectKey: data.projectKey,
+      surface: data.surface,
+      city: data.city,
+      phone: data.phone,
+      userAgent: navigator.userAgent,
+      website: document.getElementById("calcWebsite")?.value || "",
+    }),
+    keepalive: true,
+  })
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(`Notification refusée (${response.status})`);
+      }
+      return response.json();
+    })
+    .then((result) => {
+      if (!result?.success) {
+        throw new Error("Notification non envoyée");
+      }
+    })
+    .catch((error) => {
+      console.warn("Notification étape 1 non envoyée.", error);
+    });
 }
 
 function calculateQuote() {
@@ -305,7 +459,8 @@ function validateCalculatorStep() {
 
   if (invalidControl) {
     if (calculatorError) calculatorError.textContent = "Merci de répondre aux questions de cette étape.";
-    invalidControl.reportValidity();
+    markCalculatorInvalidControl(invalidControl);
+    scrollToCalculatorControl(invalidControl);
     return false;
   }
 
@@ -316,6 +471,7 @@ function restartCalculator() {
   if (!calculatorForm) return;
   calculatorForm.reset();
   calculatorHasEstimate = false;
+  clearAllCalculatorInvalidStates();
   updateCalculatorStep(0);
 
   const quoteEmpty = document.getElementById("quoteEmpty");
@@ -364,9 +520,16 @@ if (leadForm) {
 }
 
 if (calculatorForm) {
+  calculatorForm.noValidate = true;
+
   calculatorNext?.addEventListener("click", () => {
+    const shouldNotifyStepOne = calculatorStepIndex === 0;
+
     if (validateCalculatorStep()) {
       updateCalculatorStep(calculatorStepIndex + 1);
+      if (shouldNotifyStepOne) {
+        notifyStepOneCompleted();
+      }
     }
   });
 
@@ -398,6 +561,18 @@ if (calculatorForm) {
   calculatorForm.addEventListener("input", () => {
     if (calculatorHasEstimate && calculatorForm.checkValidity()) {
       calculateQuote();
+    }
+  });
+
+  calculatorForm.addEventListener("input", (event) => {
+    if (event.target?.checkValidity?.()) {
+      clearCalculatorInvalidState(event.target);
+    }
+  });
+
+  calculatorForm.addEventListener("change", (event) => {
+    if (event.target?.checkValidity?.()) {
+      clearCalculatorInvalidState(event.target);
     }
   });
 }
