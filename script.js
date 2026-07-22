@@ -159,9 +159,6 @@ const calculatorError = document.getElementById("calcFormError");
 let calculatorStepIndex = 0;
 let calculatorHasEstimate = false;
 const calculatorInvalidClass = "is-invalid";
-const formspreeStepOneEndpoint = "https://formspree.io/f/mkodvjlk";
-const formspreeStepOneStorageKey = "llcarrelage_formspree_step1_sent";
-let formspreeStepOneNotificationSent = false;
 
 function getSelectLabel(id) {
   const select = document.getElementById(id);
@@ -294,58 +291,63 @@ function getCalculatorData() {
   };
 }
 
-function hasStepOneNotificationAlreadySent() {
-  if (formspreeStepOneNotificationSent) return true;
+async function sendStepOneFormspreeNotification(data) {
+  console.log("Déclenchement notification Formspree", data);
 
   try {
-    return sessionStorage.getItem(formspreeStepOneStorageKey) === "true";
-  } catch (error) {
-    console.warn("SessionStorage indisponible pour Formspree.", error);
-    return false;
-  }
-}
-
-function markStepOneNotificationAsSent() {
-  formspreeStepOneNotificationSent = true;
-
-  try {
-    sessionStorage.setItem(formspreeStepOneStorageKey, "true");
-  } catch (error) {
-    console.warn("SessionStorage indisponible pour Formspree.", error);
-  }
-}
-
-function notifyFormspreeStepOneCompleted() {
-  if (hasStepOneNotificationAlreadySent()) return;
-
-  const data = getCalculatorData();
-  if (!data.project || !data.surface || !data.city || !data.phone || !isValidPhone(data.phone)) return;
-
-  markStepOneNotificationAsSent();
-
-  try {
-    fetch(formspreeStepOneEndpoint, {
+    const response = await fetch("https://formspree.io/f/mkodvjlk", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Accept: "application/json",
+        "Accept": "application/json",
       },
       body: JSON.stringify({
+        _subject: "Nouveau client - étape 1 du simulateur LL Carrelage",
         statut: "Le client a dépassé l’étape 1 du simulateur",
-        projet: data.project,
-        surface: `${data.surface} m²`,
-        ville: data.city,
-        telephone: data.phone,
+        projet:
+          data.project ||
+          data.projectKey ||
+          data.typeProjet ||
+          "Non renseigné",
+        surface:
+          data.surface ||
+          data.area ||
+          "Non renseignée",
+        ville:
+          data.city ||
+          data.ville ||
+          "Non renseignée",
+        telephone:
+          data.phone ||
+          data.telephone ||
+          "Non renseigné",
         page: window.location.href,
         date: new Date().toLocaleString("fr-FR"),
         _gotcha: "",
       }),
-      keepalive: true,
-    }).catch((error) => {
-      console.warn("Notification Formspree étape 1 non envoyée.", error);
     });
+
+    const result = await response.json().catch(() => null);
+
+    console.log(
+      "Réponse Formspree :",
+      response.status,
+      result
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        result?.error ||
+        result?.message ||
+        `Erreur Formspree HTTP ${response.status}`
+      );
+    }
+
+    console.log("Notification Formspree envoyée avec succès");
+    return true;
   } catch (error) {
-    console.warn("Notification Formspree étape 1 non envoyée.", error);
+    console.error("Erreur notification Formspree :", error);
+    return false;
   }
 }
 
@@ -513,15 +515,25 @@ if (calculatorForm) {
   calculatorForm.noValidate = true;
 
   calculatorNext?.addEventListener("click", () => {
-    const shouldNotifyStepOne = calculatorStepIndex === 0;
+    console.log("Étape actuelle :", calculatorStepIndex);
 
-    if (validateCalculatorStep()) {
-      if (shouldNotifyStepOne) {
-        notifyFormspreeStepOneCompleted();
-      }
+    const isStepValid = validateCalculatorStep();
+    console.log("Résultat validation :", isStepValid);
+    console.log("Données du simulateur :", getCalculatorData());
 
-      updateCalculatorStep(calculatorStepIndex + 1);
+    if (!isStepValid) {
+      return;
     }
+
+    const currentStep = calculatorStepIndex;
+    const data = getCalculatorData();
+
+    if (currentStep === 0) {
+      console.log("Appel Formspree exécuté");
+      void sendStepOneFormspreeNotification(data);
+    }
+
+    updateCalculatorStep(currentStep + 1);
   });
 
   calculatorPrevious?.addEventListener("click", () => {
