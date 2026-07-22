@@ -159,6 +159,9 @@ const calculatorError = document.getElementById("calcFormError");
 let calculatorStepIndex = 0;
 let calculatorHasEstimate = false;
 const calculatorInvalidClass = "is-invalid";
+const formspreeStepOneEndpoint = "https://formspree.io/f/mkodvjlk";
+const formspreeStepOneStorageKey = "llcarrelage_formspree_step1_sent";
+let formspreeStepOneNotificationSent = false;
 
 function getSelectLabel(id) {
   const select = document.getElementById(id);
@@ -289,6 +292,61 @@ function getCalculatorData() {
     email: limitText(document.getElementById("calcEmail")?.value, 120),
     message: limitText(document.getElementById("calcMessage")?.value, 700),
   };
+}
+
+function hasStepOneNotificationAlreadySent() {
+  if (formspreeStepOneNotificationSent) return true;
+
+  try {
+    return sessionStorage.getItem(formspreeStepOneStorageKey) === "true";
+  } catch (error) {
+    console.warn("SessionStorage indisponible pour Formspree.", error);
+    return false;
+  }
+}
+
+function markStepOneNotificationAsSent() {
+  formspreeStepOneNotificationSent = true;
+
+  try {
+    sessionStorage.setItem(formspreeStepOneStorageKey, "true");
+  } catch (error) {
+    console.warn("SessionStorage indisponible pour Formspree.", error);
+  }
+}
+
+function notifyFormspreeStepOneCompleted() {
+  if (hasStepOneNotificationAlreadySent()) return;
+
+  const data = getCalculatorData();
+  if (!data.project || !data.surface || !data.city || !data.phone || !isValidPhone(data.phone)) return;
+
+  markStepOneNotificationAsSent();
+
+  try {
+    fetch(formspreeStepOneEndpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        statut: "Le client a dépassé l’étape 1 du simulateur",
+        projet: data.project,
+        surface: `${data.surface} m²`,
+        ville: data.city,
+        telephone: data.phone,
+        page: window.location.href,
+        date: new Date().toLocaleString("fr-FR"),
+        _gotcha: "",
+      }),
+      keepalive: true,
+    }).catch((error) => {
+      console.warn("Notification Formspree étape 1 non envoyée.", error);
+    });
+  } catch (error) {
+    console.warn("Notification Formspree étape 1 non envoyée.", error);
+  }
 }
 
 function calculateQuote() {
@@ -455,7 +513,13 @@ if (calculatorForm) {
   calculatorForm.noValidate = true;
 
   calculatorNext?.addEventListener("click", () => {
+    const shouldNotifyStepOne = calculatorStepIndex === 0;
+
     if (validateCalculatorStep()) {
+      if (shouldNotifyStepOne) {
+        notifyFormspreeStepOneCompleted();
+      }
+
       updateCalculatorStep(calculatorStepIndex + 1);
     }
   });
