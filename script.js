@@ -158,8 +158,6 @@ const calculatorRestart = document.getElementById("calcRestart");
 const calculatorError = document.getElementById("calcFormError");
 let calculatorStepIndex = 0;
 let calculatorHasEstimate = false;
-const stepOneNotificationEndpoint = "api/notify-step1.php";
-const stepOneNotificationStorageKey = "llCarrelageStep1Notification";
 const calculatorInvalidClass = "is-invalid";
 
 function getSelectLabel(id) {
@@ -291,72 +289,6 @@ function getCalculatorData() {
     email: limitText(document.getElementById("calcEmail")?.value, 120),
     message: limitText(document.getElementById("calcMessage")?.value, 700),
   };
-}
-
-function getStepOneNotificationFingerprint(data) {
-  return [
-    data.projectKey,
-    data.surface,
-    data.city.toLowerCase(),
-    data.phone.replace(/\s+/g, ""),
-  ].join("|");
-}
-
-function getStoredStepOneNotification() {
-  try {
-    return sessionStorage.getItem(stepOneNotificationStorageKey);
-  } catch (error) {
-    console.warn("SessionStorage indisponible pour la notification étape 1.", error);
-    return null;
-  }
-}
-
-function storeStepOneNotification(fingerprint) {
-  try {
-    sessionStorage.setItem(stepOneNotificationStorageKey, fingerprint);
-  } catch (error) {
-    console.warn("SessionStorage indisponible pour la notification étape 1.", error);
-  }
-}
-
-function notifyStepOneCompleted() {
-  const data = getCalculatorData();
-  if (!data.projectKey || !data.surface || !data.city || !data.phone) return;
-
-  const fingerprint = getStepOneNotificationFingerprint(data);
-  const previousNotification = getStoredStepOneNotification();
-  if (previousNotification === fingerprint) return;
-
-  storeStepOneNotification(fingerprint);
-
-  fetch(stepOneNotificationEndpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      project: data.project,
-      projectKey: data.projectKey,
-      surface: data.surface,
-      city: data.city,
-      phone: data.phone,
-      userAgent: navigator.userAgent,
-      website: document.getElementById("calcWebsite")?.value || "",
-    }),
-    keepalive: true,
-  })
-    .then((response) => {
-      if (!response.ok) {
-        throw new Error(`Notification refusée (${response.status})`);
-      }
-      return response.json();
-    })
-    .then((result) => {
-      if (!result?.success) {
-        throw new Error("Notification non envoyée");
-      }
-    })
-    .catch((error) => {
-      console.warn("Notification étape 1 non envoyée.", error);
-    });
 }
 
 function calculateQuote() {
@@ -523,13 +455,8 @@ if (calculatorForm) {
   calculatorForm.noValidate = true;
 
   calculatorNext?.addEventListener("click", () => {
-    const shouldNotifyStepOne = calculatorStepIndex === 0;
-
     if (validateCalculatorStep()) {
       updateCalculatorStep(calculatorStepIndex + 1);
-      if (shouldNotifyStepOne) {
-        notifyStepOneCompleted();
-      }
     }
   });
 
