@@ -291,66 +291,6 @@ function getCalculatorData() {
   };
 }
 
-async function sendStepOneFormspreeNotification(data) {
-  console.log("Déclenchement notification Formspree", data);
-
-  try {
-    const response = await fetch("https://formspree.io/f/mkodvjlk", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-      },
-      body: JSON.stringify({
-        _subject: "Nouveau client - étape 1 du simulateur LL Carrelage",
-        statut: "Le client a dépassé l’étape 1 du simulateur",
-        projet:
-          data.project ||
-          data.projectKey ||
-          data.typeProjet ||
-          "Non renseigné",
-        surface:
-          data.surface ||
-          data.area ||
-          "Non renseignée",
-        ville:
-          data.city ||
-          data.ville ||
-          "Non renseignée",
-        telephone:
-          data.phone ||
-          data.telephone ||
-          "Non renseigné",
-        page: window.location.href,
-        date: new Date().toLocaleString("fr-FR"),
-        _gotcha: "",
-      }),
-    });
-
-    const result = await response.json().catch(() => null);
-
-    console.log(
-      "Réponse Formspree :",
-      response.status,
-      result
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        result?.error ||
-        result?.message ||
-        `Erreur Formspree HTTP ${response.status}`
-      );
-    }
-
-    console.log("Notification Formspree envoyée avec succès");
-    return true;
-  } catch (error) {
-    console.error("Erreur notification Formspree :", error);
-    return false;
-  }
-}
-
 function calculateQuote() {
   const data = getCalculatorData();
   const quoteLink = document.getElementById("quoteWhatsapp");
@@ -515,25 +455,9 @@ if (calculatorForm) {
   calculatorForm.noValidate = true;
 
   calculatorNext?.addEventListener("click", () => {
-    console.log("Étape actuelle :", calculatorStepIndex);
-
-    const isStepValid = validateCalculatorStep();
-    console.log("Résultat validation :", isStepValid);
-    console.log("Données du simulateur :", getCalculatorData());
-
-    if (!isStepValid) {
-      return;
+    if (validateCalculatorStep()) {
+      updateCalculatorStep(calculatorStepIndex + 1);
     }
-
-    const currentStep = calculatorStepIndex;
-    const data = getCalculatorData();
-
-    if (currentStep === 0) {
-      console.log("Appel Formspree exécuté");
-      void sendStepOneFormspreeNotification(data);
-    }
-
-    updateCalculatorStep(currentStep + 1);
   });
 
   calculatorPrevious?.addEventListener("click", () => {
