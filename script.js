@@ -296,6 +296,43 @@ function animateActiveCalculatorStep() {
   }, 450);
 }
 
+function scrollToEstimatedBudget() {
+  window.setTimeout(() => {
+    const quoteContent = document.getElementById("quoteContent");
+
+    if (!quoteContent || quoteContent.hidden) {
+      return;
+    }
+
+    const budgetHeading = quoteContent.querySelector(".quote-kicker") || quoteContent.querySelector("h3") || quoteContent;
+    const headerHeight = navbar?.getBoundingClientRect().height || 0;
+    const safeOffset = 18;
+    const targetPosition = budgetHeading.getBoundingClientRect().top + window.scrollY - headerHeight - safeOffset;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    window.scrollTo({
+      top: Math.max(0, targetPosition),
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  }, 150);
+}
+
+function animateEstimatedBudget() {
+  const quoteContent = document.getElementById("quoteContent");
+
+  if (!quoteContent || quoteContent.hidden) {
+    return;
+  }
+
+  quoteContent.classList.remove("quote-content-enter");
+  void quoteContent.offsetWidth;
+  quoteContent.classList.add("quote-content-enter");
+
+  window.setTimeout(() => {
+    quoteContent.classList.remove("quote-content-enter");
+  }, 500);
+}
+
 function formatEuros(value) {
   return `${Math.round(value).toLocaleString("fr-FR")} €`;
 }
@@ -520,12 +557,19 @@ if (calculatorForm) {
     const data = getCalculatorData();
     if (!isValidPhone(data.phone)) {
       if (calculatorError) calculatorError.textContent = "Vérifiez le numéro de téléphone indiqué.";
-      document.getElementById("calcPhone")?.focus();
+      const phoneField = document.getElementById("calcPhone");
+      if (phoneField) {
+        markCalculatorInvalidControl(phoneField);
+        scrollToCalculatorControl(phoneField);
+      }
       return;
     }
 
     calculatorHasEstimate = calculateQuote();
-    document.getElementById("quoteContent")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (calculatorHasEstimate) {
+      animateEstimatedBudget();
+      scrollToEstimatedBudget();
+    }
   });
 
   calculatorForm.addEventListener("input", () => {

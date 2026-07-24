@@ -1135,6 +1135,11 @@ textarea {
   75% { transform: translateX(-2px); }
 }
 
+@keyframes quoteContentEnter {
+  from { opacity: 0.5; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 .calculator-notes {
   display: grid;
   gap: 8px;
@@ -1207,6 +1212,10 @@ textarea {
 
 .quote-content {
   animation: calculatorStepIn 0.35s ease both;
+}
+
+.quote-content-enter {
+  animation: quoteContentEnter 0.45s ease;
 }
 
 .quote-price-list {
@@ -1583,6 +1592,10 @@ textarea {
   }
 
   .calculator-step-enter {
+    animation: none;
+  }
+
+  .quote-content-enter {
     animation: none;
   }
 }
