@@ -259,51 +259,29 @@ function scrollToCalculatorControl(control) {
   }, 620);
 }
 
-function scrollToCurrentCalculatorStep() {
-  const maxAttempts = 10;
-  let attempts = 0;
+function scrollToCalculatorStep(stepElement) {
+  if (!stepElement) return;
 
-  const tryScroll = () => {
-    attempts += 1;
+  window.setTimeout(() => {
+    const firstField =
+      stepElement.querySelector(".calculator-field") ||
+      stepElement.querySelector("fieldset") ||
+      stepElement.querySelector("select, input:not([type='hidden']), textarea, button") ||
+      stepElement;
 
-    const currentStep = document.querySelector(".calculator-step.is-active:not([hidden])");
-    const isVisible =
-      currentStep &&
-      currentStep.offsetParent !== null &&
-      currentStep.getBoundingClientRect().height > 0;
-
-    if (!isVisible) {
-      if (attempts < maxAttempts) requestAnimationFrame(tryScroll);
-      return;
-    }
-
-    const firstChoice = currentStep.querySelector(
-      [
-        ".calculator-choices label",
-        ".calculator-field",
-        "button:not([disabled])",
-        "input:not([type='hidden']):not([disabled])",
-        "select:not([disabled])",
-        "textarea:not([disabled])",
-        "[tabindex]:not([tabindex='-1'])",
-      ].join(",")
-    );
-    const target = getCalculatorField(firstChoice) || firstChoice || currentStep || document.getElementById("devis");
-
-    if (!target) return;
-
-    const headerOffset = Math.max(getCalculatorHeaderOffset(), 100);
-    const targetTop = target.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+    const headerHeight = navbar?.getBoundingClientRect().height || 0;
+    const extraOffset = 24;
+    const top =
+      firstField.getBoundingClientRect().top +
+      window.scrollY -
+      headerHeight -
+      extraOffset;
 
     window.scrollTo({
-      top: Math.max(0, targetTop),
+      top: Math.max(0, top),
       behavior: "smooth",
     });
-  };
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(tryScroll);
-  });
+  }, 100);
 }
 
 function formatEuros(value) {
@@ -406,7 +384,7 @@ function calculateQuote() {
   return true;
 }
 
-function updateCalculatorStep(nextIndex) {
+function updateCalculatorStep(nextIndex, shouldScroll = false) {
   if (!calculatorSteps.length) return;
   calculatorStepIndex = Math.max(0, Math.min(nextIndex, calculatorSteps.length - 1));
 
@@ -428,6 +406,10 @@ function updateCalculatorStep(nextIndex) {
   if (calculatorNext) calculatorNext.hidden = calculatorStepIndex === calculatorSteps.length - 1;
   if (calculatorSubmit) calculatorSubmit.hidden = calculatorStepIndex !== calculatorSteps.length - 1;
   if (calculatorError) calculatorError.textContent = "";
+
+  if (shouldScroll) {
+    scrollToCalculatorStep(calculatorSteps[calculatorStepIndex]);
+  }
 }
 
 function validateCalculatorStep() {
@@ -502,10 +484,13 @@ if (calculatorForm) {
   calculatorForm.noValidate = true;
 
   calculatorNext?.addEventListener("click", () => {
-    if (validateCalculatorStep()) {
-      updateCalculatorStep(calculatorStepIndex + 1);
-      scrollToCurrentCalculatorStep();
+    const isValid = validateCalculatorStep();
+
+    if (!isValid) {
+      return;
     }
+
+    updateCalculatorStep(calculatorStepIndex + 1, true);
   });
 
   calculatorPrevious?.addEventListener("click", () => {
