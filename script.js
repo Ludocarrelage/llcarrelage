@@ -260,27 +260,49 @@ function scrollToCalculatorControl(control) {
 }
 
 function scrollToCurrentCalculatorStep() {
-  requestAnimationFrame(() => {
-    const currentStep = calculatorSteps[calculatorStepIndex];
-    if (!currentStep || currentStep.hidden) return;
+  const maxAttempts = 10;
+  let attempts = 0;
 
-    const firstInteractiveElement = currentStep.querySelector(
-      "input:not([type='hidden']):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex='-1'])"
+  const tryScroll = () => {
+    attempts += 1;
+
+    const currentStep = document.querySelector(".calculator-step.is-active:not([hidden])");
+    const isVisible =
+      currentStep &&
+      currentStep.offsetParent !== null &&
+      currentStep.getBoundingClientRect().height > 0;
+
+    if (!isVisible) {
+      if (attempts < maxAttempts) requestAnimationFrame(tryScroll);
+      return;
+    }
+
+    const firstChoice = currentStep.querySelector(
+      [
+        ".calculator-choices label",
+        ".calculator-field",
+        "button:not([disabled])",
+        "input:not([type='hidden']):not([disabled])",
+        "select:not([disabled])",
+        "textarea:not([disabled])",
+        "[tabindex]:not([tabindex='-1'])",
+      ].join(",")
     );
-    const target =
-      getCalculatorField(firstInteractiveElement) ||
-      currentStep ||
-      document.getElementById("devis");
+    const target = getCalculatorField(firstChoice) || firstChoice || currentStep || document.getElementById("devis");
 
     if (!target) return;
 
     const headerOffset = Math.max(getCalculatorHeaderOffset(), 100);
-    const top = target.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+    const targetTop = target.getBoundingClientRect().top + window.pageYOffset - headerOffset;
 
     window.scrollTo({
-      top: Math.max(top, 0),
+      top: Math.max(0, targetTop),
       behavior: "smooth",
     });
+  };
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(tryScroll);
   });
 }
 
