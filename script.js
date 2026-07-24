@@ -259,20 +259,41 @@ function scrollToCalculatorControl(control) {
   }, 620);
 }
 
-function scrollToCalculatorTop() {
-  const simulateur = document.getElementById("devis");
-
-  if (!simulateur) return;
-
+function scrollToActiveStepHeading() {
   window.setTimeout(() => {
-    const header = document.querySelector(".navbar");
-    const offset = header ? header.offsetHeight + 20 : 20;
+    const activeStep = calculatorSteps[calculatorStepIndex];
+
+    if (!activeStep || activeStep.hidden) {
+      return;
+    }
+
+    const stepHeading = activeStep.querySelector(".calculator-step-heading");
+    const firstQuestion = activeStep.querySelector(".calculator-field");
+    const target = stepHeading || firstQuestion || activeStep;
+    const headerHeight = navbar?.getBoundingClientRect().height || 0;
+    const safeOffset = 18;
+    const targetPosition = target.getBoundingClientRect().top + window.scrollY - headerHeight - safeOffset;
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     window.scrollTo({
-      top: simulateur.getBoundingClientRect().top + window.scrollY - offset,
-      behavior: "smooth",
+      top: Math.max(0, targetPosition),
+      behavior: reducedMotion ? "auto" : "smooth",
     });
-  }, 100);
+  }, 150);
+}
+
+function animateActiveCalculatorStep() {
+  const activeStep = calculatorSteps[calculatorStepIndex];
+
+  if (!activeStep) return;
+
+  activeStep.classList.remove("calculator-step-enter");
+  void activeStep.offsetWidth;
+  activeStep.classList.add("calculator-step-enter");
+
+  window.setTimeout(() => {
+    activeStep.classList.remove("calculator-step-enter");
+  }, 450);
 }
 
 function formatEuros(value) {
@@ -478,7 +499,8 @@ if (calculatorForm) {
     }
 
     updateCalculatorStep(calculatorStepIndex + 1);
-    scrollToCalculatorTop();
+    animateActiveCalculatorStep();
+    scrollToActiveStepHeading();
   });
 
   calculatorPrevious?.addEventListener("click", () => {
