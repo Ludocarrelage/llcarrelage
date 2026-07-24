@@ -259,29 +259,42 @@ function scrollToCalculatorControl(control) {
   }, 620);
 }
 
-function scrollToCalculatorStep(stepElement) {
-  if (!stepElement) return;
+function scrollToCalculatorTop() {
+  const calculatorSection =
+    document.getElementById("devis") ||
+    document.querySelector(".quote-calculator") ||
+    document.querySelector(".calculator-box");
+
+  if (!calculatorSection) return;
 
   window.setTimeout(() => {
-    const firstField =
-      stepElement.querySelector(".calculator-field") ||
-      stepElement.querySelector("fieldset") ||
-      stepElement.querySelector("select, input:not([type='hidden']), textarea, button") ||
-      stepElement;
-
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const headerHeight = navbar?.getBoundingClientRect().height || 0;
-    const extraOffset = 24;
-    const top =
-      firstField.getBoundingClientRect().top +
+    const extraOffset = 16;
+    const targetTop =
+      calculatorSection.getBoundingClientRect().top +
       window.scrollY -
       headerHeight -
       extraOffset;
 
     window.scrollTo({
-      top: Math.max(0, top),
-      behavior: "smooth",
+      top: Math.max(0, targetTop),
+      behavior: reducedMotion ? "auto" : "smooth",
     });
   }, 100);
+}
+
+function animateCurrentCalculatorStep() {
+  const activeStep = calculatorSteps[calculatorStepIndex];
+  if (!activeStep) return;
+
+  activeStep.classList.remove("calculator-step-step-enter");
+  void activeStep.offsetWidth;
+  activeStep.classList.add("calculator-step-step-enter");
+
+  window.setTimeout(() => {
+    activeStep.classList.remove("calculator-step-step-enter");
+  }, 500);
 }
 
 function formatEuros(value) {
@@ -384,7 +397,7 @@ function calculateQuote() {
   return true;
 }
 
-function updateCalculatorStep(nextIndex, shouldScroll = false) {
+function updateCalculatorStep(nextIndex) {
   if (!calculatorSteps.length) return;
   calculatorStepIndex = Math.max(0, Math.min(nextIndex, calculatorSteps.length - 1));
 
@@ -406,10 +419,6 @@ function updateCalculatorStep(nextIndex, shouldScroll = false) {
   if (calculatorNext) calculatorNext.hidden = calculatorStepIndex === calculatorSteps.length - 1;
   if (calculatorSubmit) calculatorSubmit.hidden = calculatorStepIndex !== calculatorSteps.length - 1;
   if (calculatorError) calculatorError.textContent = "";
-
-  if (shouldScroll) {
-    scrollToCalculatorStep(calculatorSteps[calculatorStepIndex]);
-  }
 }
 
 function validateCalculatorStep() {
@@ -490,7 +499,9 @@ if (calculatorForm) {
       return;
     }
 
-    updateCalculatorStep(calculatorStepIndex + 1, true);
+    updateCalculatorStep(calculatorStepIndex + 1);
+    animateCurrentCalculatorStep();
+    scrollToCalculatorTop();
   });
 
   calculatorPrevious?.addEventListener("click", () => {

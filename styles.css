@@ -936,6 +936,10 @@ textarea {
   animation: calculatorStepIn 0.32s ease both;
 }
 
+.calculator-step-step-enter {
+  animation: calculatorStepEnter 0.45s ease;
+}
+
 .calculator-step-heading {
   align-items: center;
   border-bottom: 1px solid rgba(38, 54, 59, 0.12);
@@ -1116,6 +1120,11 @@ textarea {
 
 @keyframes calculatorStepIn {
   from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes calculatorStepEnter {
+  from { opacity: 0.65; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
@@ -1571,6 +1580,10 @@ textarea {
     animation-duration: 0.01ms !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .calculator-step-step-enter {
+    animation: none;
   }
 }
 
