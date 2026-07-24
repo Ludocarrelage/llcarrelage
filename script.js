@@ -260,41 +260,19 @@ function scrollToCalculatorControl(control) {
 }
 
 function scrollToCalculatorTop() {
-  const calculatorSection =
-    document.getElementById("devis") ||
-    document.querySelector(".quote-calculator") ||
-    document.querySelector(".calculator-box");
+  const simulateur = document.getElementById("devis");
 
-  if (!calculatorSection) return;
+  if (!simulateur) return;
 
   window.setTimeout(() => {
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const headerHeight = navbar?.getBoundingClientRect().height || 0;
-    const extraOffset = 16;
-    const targetTop =
-      calculatorSection.getBoundingClientRect().top +
-      window.scrollY -
-      headerHeight -
-      extraOffset;
+    const header = document.querySelector(".navbar");
+    const offset = header ? header.offsetHeight + 20 : 20;
 
     window.scrollTo({
-      top: Math.max(0, targetTop),
-      behavior: reducedMotion ? "auto" : "smooth",
+      top: simulateur.getBoundingClientRect().top + window.scrollY - offset,
+      behavior: "smooth",
     });
   }, 100);
-}
-
-function animateCurrentCalculatorStep() {
-  const activeStep = calculatorSteps[calculatorStepIndex];
-  if (!activeStep) return;
-
-  activeStep.classList.remove("calculator-step-step-enter");
-  void activeStep.offsetWidth;
-  activeStep.classList.add("calculator-step-step-enter");
-
-  window.setTimeout(() => {
-    activeStep.classList.remove("calculator-step-step-enter");
-  }, 500);
 }
 
 function formatEuros(value) {
@@ -500,7 +478,6 @@ if (calculatorForm) {
     }
 
     updateCalculatorStep(calculatorStepIndex + 1);
-    animateCurrentCalculatorStep();
     scrollToCalculatorTop();
   });
 
