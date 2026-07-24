@@ -259,6 +259,31 @@ function scrollToCalculatorControl(control) {
   }, 620);
 }
 
+function scrollToCurrentCalculatorStep() {
+  requestAnimationFrame(() => {
+    const currentStep = calculatorSteps[calculatorStepIndex];
+    if (!currentStep || currentStep.hidden) return;
+
+    const firstInteractiveElement = currentStep.querySelector(
+      "input:not([type='hidden']):not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex='-1'])"
+    );
+    const target =
+      getCalculatorField(firstInteractiveElement) ||
+      currentStep ||
+      document.getElementById("devis");
+
+    if (!target) return;
+
+    const headerOffset = Math.max(getCalculatorHeaderOffset(), 100);
+    const top = target.getBoundingClientRect().top + window.pageYOffset - headerOffset;
+
+    window.scrollTo({
+      top: Math.max(top, 0),
+      behavior: "smooth",
+    });
+  });
+}
+
 function formatEuros(value) {
   return `${Math.round(value).toLocaleString("fr-FR")} €`;
 }
@@ -457,6 +482,7 @@ if (calculatorForm) {
   calculatorNext?.addEventListener("click", () => {
     if (validateCalculatorStep()) {
       updateCalculatorStep(calculatorStepIndex + 1);
+      scrollToCurrentCalculatorStep();
     }
   });
 
