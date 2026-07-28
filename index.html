@@ -209,7 +209,7 @@
           <div class="calculator-step is-active" data-calc-step="0">
             <div class="calculator-step-heading">
               <span>01</span>
-              <div><h3>Votre demande rapide</h3><p>Quatre informations suffisent pour commencer.</p></div>
+              <div><h3>Votre demande rapide</h3><p>Cinq informations suffisent pour commencer.</p></div>
             </div>
             <div class="calculator-fields">
               <label class="calculator-field" for="calcProject"><span>Type de chantier</span>
@@ -236,6 +236,11 @@
 
               <label class="calculator-field" for="calcCity"><span>Ville du chantier</span>
                 <input type="text" id="calcCity" maxlength="80" autocomplete="address-level2" placeholder="Ex : Vienne" required />
+              </label>
+
+              <label class="calculator-field" for="calcPostalCode"><span>Code postal du chantier</span>
+                <input type="text" id="calcPostalCode" maxlength="5" inputmode="numeric" autocomplete="postal-code" placeholder="Ex : 38200" pattern="[0-9]{5}" required />
+                <small>Le code postal permet d'affiner le calcul des frais de déplacement.</small>
               </label>
 
               <label class="calculator-field" for="calcPhone"><span>Votre téléphone</span>
@@ -386,6 +391,7 @@
                 <div><dt>Chantier</dt><dd id="summaryProject">-</dd></div>
                 <div><dt>Surface</dt><dd id="summarySurface">-</dd></div>
                 <div><dt>Ville</dt><dd id="summaryCity">-</dd></div>
+                <div><dt>Code postal</dt><dd id="summaryPostalCode">-</dd></div>
                 <div><dt>Distance</dt><dd id="summaryDistance">-</dd></div>
                 <div><dt>Frais de déplacement</dt><dd id="summaryTravelFee">-</dd></div>
                 <div><dt>Carrelage</dt><dd id="summaryTiles">-</dd></div>
@@ -523,7 +529,7 @@
     <a href="#devis">Demander un devis</a>
   </footer>
 
-  <script src="script.js?v=20260728b"></script>
+  <script src="script.js?v=20260728c"></script>
 </body>
 </html>
 

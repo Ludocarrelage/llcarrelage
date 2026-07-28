@@ -100,6 +100,10 @@ function isValidPhone(value) {
   return /^[0-9+().\s-]{8,25}$/.test(String(value || "").trim());
 }
 
+function isValidFrenchPostalCode(value) {
+  return /^[0-9]{5}$/.test(String(value || "").trim());
+}
+
 function showGalleryImage(index) {
   if (!galleryItems.length || !galleryLightboxImage) return;
   galleryCurrentIndex = (index + galleryItems.length) % galleryItems.length;
@@ -224,6 +228,24 @@ function clearAllCalculatorInvalidStates() {
   calculatorForm?.querySelectorAll("[aria-invalid]").forEach((control) => {
     control.removeAttribute("aria-invalid");
   });
+}
+
+function updateCalculatorPostalCodeValidity() {
+  const postalCodeField = document.getElementById("calcPostalCode");
+  if (!postalCodeField) return;
+
+  const value = String(postalCodeField.value || "").trim();
+  postalCodeField.setCustomValidity(value && !isValidFrenchPostalCode(value)
+    ? "Indiquez un code postal valide à 5 chiffres."
+    : "");
+}
+
+function getCalculatorValidationMessage(control) {
+  if (control?.id === "calcPostalCode") {
+    return "Indiquez un code postal valide à 5 chiffres.";
+  }
+
+  return "Merci de répondre aux questions de cette étape.";
 }
 
 function markCalculatorInvalidControl(control) {
@@ -441,36 +463,74 @@ async function fetchCalculatorJson(url) {
   }
 }
 
-async function geocodeCalculatorCity(city) {
+function getCalculatorPlaceCoordinates(place) {
+  return {
+    lat: Number(place.lat),
+    lon: Number(place.lon),
+  };
+}
+
+function isFrenchCalculatorPlace(place) {
+  const countryCode = limitText(place?.address?.country_code, 8).toLowerCase();
+  return !countryCode || countryCode === "fr";
+}
+
+function doesCalculatorPlaceMatchPostalCode(place, expectedPostalCode) {
+  const normalizedExpectedPostalCode = limitText(expectedPostalCode, 5);
+  if (!normalizedExpectedPostalCode) return true;
+
+  const postcodes = String(place?.address?.postcode || "")
+    .split(/[;,]/)
+    .map((postcode) => postcode.replace(/\s+/g, "").trim())
+    .filter(Boolean);
+
+  return postcodes.some((postcode) => (
+    postcode === normalizedExpectedPostalCode ||
+    postcode.startsWith(normalizedExpectedPostalCode)
+  ));
+}
+
+async function geocodeCalculatorCity(city, postalCode) {
   const cityLabel = limitText(city, 80);
-  const queries = [
-    `${cityLabel}, Auvergne-Rhône-Alpes, France`,
-    `${cityLabel}, France`,
-  ];
+  const expectedPostalCode = limitText(postalCode, 5);
+  const queries = expectedPostalCode
+    ? [
+        `${expectedPostalCode} ${cityLabel}, France`,
+        `${cityLabel} ${expectedPostalCode}, France`,
+        `${expectedPostalCode}, France`,
+        `${cityLabel}, France`,
+      ]
+    : [
+        `${cityLabel}, Auvergne-Rhône-Alpes, France`,
+        `${cityLabel}, France`,
+      ];
+  let firstFrenchFallback = null;
 
   for (const query of queries) {
     const params = new URLSearchParams({
       q: query,
       format: "jsonv2",
       addressdetails: "1",
-      limit: "1",
+      limit: "5",
       countrycodes: "fr",
       email: "llcarrelage@outlook.fr",
     });
     params.set("accept-language", "fr");
 
     const results = await fetchCalculatorJson(`https://nominatim.openstreetmap.org/search?${params.toString()}`);
-    const place = Array.isArray(results) ? results.find((item) => item?.lat && item?.lon) : null;
+    const places = Array.isArray(results)
+      ? results.filter((item) => item?.lat && item?.lon && isFrenchCalculatorPlace(item))
+      : [];
+    const matchingPlace = places.find((place) => doesCalculatorPlaceMatchPostalCode(place, expectedPostalCode));
 
-    if (place) {
-      return {
-        lat: Number(place.lat),
-        lon: Number(place.lon),
-      };
+    if (matchingPlace) {
+      return getCalculatorPlaceCoordinates(matchingPlace);
     }
+
+    if (!firstFrenchFallback && places[0]) firstFrenchFallback = places[0];
   }
 
-  return null;
+  return firstFrenchFallback ? getCalculatorPlaceCoordinates(firstFrenchFallback) : null;
 }
 
 async function fetchCalculatorRouteDistanceKm(destination) {
@@ -499,9 +559,12 @@ async function fetchCalculatorRouteDistanceKm(destination) {
   return Math.max(0, Math.round(distanceMeters / 1000));
 }
 
-async function calculateTravelFees(city) {
-  const cityKey = normalizeCalculatorCity(city);
-  if (cityKey.length < 2) return getUnavailableTravelResult();
+async function calculateTravelFees(city, postalCode) {
+  const cityLabel = normalizeCalculatorCity(city);
+  const normalizedPostalCode = limitText(postalCode, 5);
+  if (cityLabel.length < 2 || !isValidFrenchPostalCode(normalizedPostalCode)) return getUnavailableTravelResult();
+
+  const cityKey = normalizeCalculatorCity(`${normalizedPostalCode}-${cityLabel}`);
 
   const cachedValue = readCalculatorTravelCache(cityKey);
   if (cachedValue) return cachedValue;
@@ -511,7 +574,7 @@ async function calculateTravelFees(city) {
 
   const request = (async () => {
     try {
-      const destination = await geocodeCalculatorCity(city);
+      const destination = await geocodeCalculatorCity(city, normalizedPostalCode);
       const distanceKm = await fetchCalculatorRouteDistanceKm(destination);
       const extraKm = Math.max(0, distanceKm - calculatorTravelSettings.includedKm);
       const fee = Math.round(extraKm * calculatorTravelSettings.pricePerExtraKm * 100) / 100;
@@ -553,6 +616,7 @@ function getCalculatorData() {
     baseboards: getRadioAnswer("calcBaseboards"),
     timeline: getSelectLabel("calcTimeline"),
     city: limitText(document.getElementById("calcCity")?.value, 80),
+    postalCode: limitText(document.getElementById("calcPostalCode")?.value, 5),
     name: limitText(document.getElementById("calcName")?.value, 80),
     phone: limitText(document.getElementById("calcPhone")?.value, 25),
     email: limitText(document.getElementById("calcEmail")?.value, 120),
@@ -577,7 +641,7 @@ async function calculateQuote(requestId = calculatorQuoteRequestId) {
   const baseboardsAdjustment = data.baseboards === "Oui" && data.projectKey !== "baseboards" ? 10 : 0;
   const estimatedRate = baseRate + formatAdjustment + supportAdjustment + removalAdjustment + flatAdjustment + baseboardsAdjustment;
   const workPrice = estimatedRate * data.surface;
-  const travelResult = await calculateTravelFees(data.city);
+  const travelResult = await calculateTravelFees(data.city, data.postalCode);
 
   if (requestId !== calculatorQuoteRequestId) {
     return false;
@@ -601,6 +665,7 @@ async function calculateQuote(requestId = calculatorQuoteRequestId) {
   setCalculatorText("summaryProject", data.project);
   setCalculatorText("summarySurface", `${data.surface.toLocaleString("fr-FR")} ${projectUnit}`);
   setCalculatorText("summaryCity", data.city);
+  setCalculatorText("summaryPostalCode", data.postalCode);
   setCalculatorText("summaryDistance", travelDistanceText);
   setCalculatorText("summaryTravelFee", travelFeeText);
   setCalculatorText("summaryTiles", data.tilesBought);
@@ -618,6 +683,7 @@ async function calculateQuote(requestId = calculatorQuoteRequestId) {
     `Type de chantier : ${data.project}`,
     `Surface : ${data.surface} ${projectUnit}`,
     `Ville : ${data.city}`,
+    `Code postal : ${data.postalCode}`,
     `Distance : ${travelDistanceText}`,
     `Frais de déplacement : ${travelFeeText}`,
     `Carrelage déjà acheté : ${data.tilesBought}`,
@@ -666,7 +732,8 @@ function scheduleCalculatorRecalculation(event) {
     return;
   }
 
-  if (normalizeCalculatorCity(getCalculatorData().city).length < 2) {
+  const data = getCalculatorData();
+  if (normalizeCalculatorCity(data.city).length < 2 || !isValidFrenchPostalCode(data.postalCode)) {
     return;
   }
 
@@ -709,11 +776,12 @@ function updateCalculatorStep(nextIndex) {
 function validateCalculatorStep() {
   const currentStep = calculatorSteps[calculatorStepIndex];
   if (!currentStep) return false;
+  updateCalculatorPostalCodeValidity();
   const controls = Array.from(currentStep.querySelectorAll("input, select, textarea"));
   const invalidControl = controls.find((control) => !control.checkValidity());
 
   if (invalidControl) {
-    if (calculatorError) calculatorError.textContent = "Merci de répondre aux questions de cette étape.";
+    if (calculatorError) calculatorError.textContent = getCalculatorValidationMessage(invalidControl);
     markCalculatorInvalidControl(invalidControl);
     scrollToCalculatorControl(invalidControl);
     return false;
@@ -726,6 +794,7 @@ function restartCalculator() {
   if (!calculatorForm) return;
   calculatorForm.reset();
   calculatorHasEstimate = false;
+  updateCalculatorPostalCodeValidity();
   clearAllCalculatorInvalidStates();
   updateCalculatorStep(0);
 
@@ -824,6 +893,10 @@ if (calculatorForm) {
   });
 
   calculatorForm.addEventListener("input", (event) => {
+    if (event.target?.id === "calcPostalCode") {
+      updateCalculatorPostalCodeValidity();
+    }
+
     if (event.target?.checkValidity?.()) {
       clearCalculatorInvalidState(event.target);
     }
@@ -834,6 +907,10 @@ if (calculatorForm) {
   });
 
   calculatorForm.addEventListener("change", (event) => {
+    if (event.target?.id === "calcPostalCode") {
+      updateCalculatorPostalCodeValidity();
+    }
+
     if (event.target?.checkValidity?.()) {
       clearCalculatorInvalidState(event.target);
     }
