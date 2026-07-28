@@ -138,7 +138,7 @@ const calculatorBaseRates = Object.freeze({
   bathroom: 45,
   shower: 50,
   "kitchen-wall": 25,
-  "bathroom-wall": 30,
+  "bathroom-wall": 25,
   stairs: 50,
   baseboards: 15,
 });
@@ -175,6 +175,8 @@ const calculatorRestart = document.getElementById("calcRestart");
 const calculatorError = document.getElementById("calcFormError");
 let calculatorStepIndex = 0;
 let calculatorHasEstimate = false;
+let calculatorRecalculationTimer = null;
+let calculatorQuoteRequestId = 0;
 const calculatorInvalidClass = "is-invalid";
 
 function getSelectLabel(id) {
@@ -241,39 +243,19 @@ function markCalculatorInvalidControl(control) {
   control.setAttribute("aria-invalid", "true");
 }
 
-function focusCalculatorControl(control) {
-  if (!control) return;
-
-  try {
-    control.focus({ preventScroll: true });
-  } catch (error) {
-    control.focus();
-  }
-}
-
 function scrollToCalculatorControl(control) {
   const target = getCalculatorField(control);
   if (!target) return;
 
-  target.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-
   window.setTimeout(() => {
-    const targetTop = target.getBoundingClientRect().top + window.pageYOffset - getCalculatorHeaderOffset();
-    window.scrollTo({ top: Math.max(targetTop, 0), behavior: "smooth" });
-  }, 80);
+    const targetPosition = target.getBoundingClientRect().top + window.scrollY - getCalculatorHeaderOffset();
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  window.setTimeout(() => {
-    focusCalculatorControl(control);
-  }, 260);
-
-  window.setTimeout(() => {
-    const rect = target.getBoundingClientRect();
-    const headerOffset = getCalculatorHeaderOffset();
-    if (rect.top < headerOffset || rect.bottom > window.innerHeight - 24) {
-      const targetTop = target.getBoundingClientRect().top + window.pageYOffset - headerOffset;
-      window.scrollTo({ top: Math.max(targetTop, 0), behavior: "smooth" });
-    }
-  }, 620);
+    window.scrollTo({
+      top: Math.max(0, targetPosition),
+      behavior: reducedMotion ? "auto" : "smooth",
+    });
+  }, 50);
 }
 
 function scrollToActiveStepHeading() {
@@ -350,8 +332,28 @@ function animateEstimatedBudget() {
   }, 500);
 }
 
+const euroFormatter = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2,
+});
+
+const euroCentFormatter = new Intl.NumberFormat("fr-FR", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+
 function formatEuros(value) {
-  return `${Math.round(value).toLocaleString("fr-FR")} €`;
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount)) {
+    return "0 €";
+  }
+
+  return Number.isInteger(amount) ? euroFormatter.format(amount) : euroCentFormatter.format(amount);
 }
 
 function getCalculatorProjectUnit(projectKey) {
@@ -499,7 +501,7 @@ async function fetchCalculatorRouteDistanceKm(destination) {
 
 async function calculateTravelFees(city) {
   const cityKey = normalizeCalculatorCity(city);
-  if (!cityKey) return getUnavailableTravelResult();
+  if (cityKey.length < 2) return getUnavailableTravelResult();
 
   const cachedValue = readCalculatorTravelCache(cityKey);
   if (cachedValue) return cachedValue;
@@ -512,7 +514,7 @@ async function calculateTravelFees(city) {
       const destination = await geocodeCalculatorCity(city);
       const distanceKm = await fetchCalculatorRouteDistanceKm(destination);
       const extraKm = Math.max(0, distanceKm - calculatorTravelSettings.includedKm);
-      const fee = Math.round(extraKm * calculatorTravelSettings.pricePerExtraKm);
+      const fee = Math.round(extraKm * calculatorTravelSettings.pricePerExtraKm * 100) / 100;
       const result = { status: "ok", distanceKm, fee };
       writeCalculatorTravelCache(cityKey, result);
       return result;
@@ -558,7 +560,7 @@ function getCalculatorData() {
   };
 }
 
-async function calculateQuote() {
+async function calculateQuote(requestId = calculatorQuoteRequestId) {
   const data = getCalculatorData();
   const quoteLink = document.getElementById("quoteWhatsapp");
   const quoteEmpty = document.getElementById("quoteEmpty");
@@ -576,6 +578,11 @@ async function calculateQuote() {
   const estimatedRate = baseRate + formatAdjustment + supportAdjustment + removalAdjustment + flatAdjustment + baseboardsAdjustment;
   const workPrice = estimatedRate * data.surface;
   const travelResult = await calculateTravelFees(data.city);
+
+  if (requestId !== calculatorQuoteRequestId) {
+    return false;
+  }
+
   const travelFee = travelResult.status === "ok" ? travelResult.fee : 0;
   const averagePrice = workPrice + travelFee;
   const lowPrice = Math.round(workPrice * 0.85 + travelFee);
@@ -634,6 +641,45 @@ async function calculateQuote() {
   quoteEmpty.hidden = true;
   quoteContent.hidden = false;
   return true;
+}
+
+function isTextLikeCalculatorControl(control) {
+  if (!control?.matches) return false;
+  return control.matches("textarea, input:not([type='radio']):not([type='checkbox'])");
+}
+
+async function refreshCalculatorQuote(requestId = ++calculatorQuoteRequestId) {
+  const result = await calculateQuote(requestId);
+
+  if (requestId !== calculatorQuoteRequestId) {
+    return false;
+  }
+
+  return result;
+}
+
+function scheduleCalculatorRecalculation(event) {
+  const requestId = ++calculatorQuoteRequestId;
+  window.clearTimeout(calculatorRecalculationTimer);
+
+  if (!calculatorHasEstimate || !calculatorForm || !calculatorForm.checkValidity()) {
+    return;
+  }
+
+  if (normalizeCalculatorCity(getCalculatorData().city).length < 2) {
+    return;
+  }
+
+  const delay = isTextLikeCalculatorControl(event?.target) ? 600 : 0;
+
+  if (delay > 0) {
+    calculatorRecalculationTimer = window.setTimeout(() => {
+      void refreshCalculatorQuote(requestId);
+    }, delay);
+    return;
+  }
+
+  void refreshCalculatorQuote(requestId);
 }
 
 function updateCalculatorStep(nextIndex) {
@@ -745,6 +791,8 @@ if (calculatorForm) {
 
   calculatorPrevious?.addEventListener("click", () => {
     updateCalculatorStep(calculatorStepIndex - 1);
+    animateActiveCalculatorStep();
+    scrollToActiveStepHeading();
   });
 
   calculatorRestart?.addEventListener("click", restartCalculator);
@@ -768,16 +816,10 @@ if (calculatorForm) {
       return;
     }
 
-    calculatorHasEstimate = await calculateQuote();
+    calculatorHasEstimate = await refreshCalculatorQuote();
     if (calculatorHasEstimate) {
       animateEstimatedBudget();
       scrollToEstimatedBudget();
-    }
-  });
-
-  calculatorForm.addEventListener("input", () => {
-    if (calculatorHasEstimate && calculatorForm.checkValidity()) {
-      void calculateQuote();
     }
   });
 
@@ -785,11 +827,19 @@ if (calculatorForm) {
     if (event.target?.checkValidity?.()) {
       clearCalculatorInvalidState(event.target);
     }
+
+    if (isTextLikeCalculatorControl(event.target)) {
+      scheduleCalculatorRecalculation(event);
+    }
   });
 
   calculatorForm.addEventListener("change", (event) => {
     if (event.target?.checkValidity?.()) {
       clearCalculatorInvalidState(event.target);
+    }
+
+    if (!isTextLikeCalculatorControl(event.target)) {
+      scheduleCalculatorRecalculation(event);
     }
   });
 }
