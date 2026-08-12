@@ -1956,6 +1956,48 @@ textarea {
   margin-top: 20px;
 }
 
+.realisations-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.realisations-card {
+  border-radius: 12px;
+  cursor: pointer;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.realisations-card picture {
+  display: block;
+  height: 320px;
+  overflow: hidden;
+  width: 100%;
+}
+
+.realisations-card img {
+  display: block;
+  height: 100%;
+  max-width: 100%;
+  object-fit: cover;
+  object-position: center;
+  width: 100%;
+}
+
+.realisations-card figcaption {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding-top: 10px;
+}
+
+.realisations-card:focus-visible {
+  outline: 3px solid rgba(245, 138, 76, 0.55);
+  outline-offset: 4px;
+}
+
 @media (max-width: 1200px) and (min-width: 901px) {
   .navbar {
     padding-left: 24px;
@@ -1993,6 +2035,9 @@ textarea {
     order: 4;
   }
 
+  .realisations-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
@@ -2014,6 +2059,15 @@ textarea {
 
   .hero-trust {
     font-size: 0.92rem;
+  }
+
+  .realisations-grid {
+    gap: 18px;
+    grid-template-columns: 1fr;
+  }
+
+  .realisations-card picture {
+    height: 280px;
   }
 
   .whatsapp {

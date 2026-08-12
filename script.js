@@ -112,7 +112,7 @@ function showGalleryImage(index) {
   const item = galleryItems[galleryCurrentIndex];
   const image = item.querySelector("img");
 
-  galleryLightboxImage.src = image?.currentSrc || image?.getAttribute("src") || "";
+  galleryLightboxImage.src = item.dataset.gallerySrc || image?.currentSrc || image?.getAttribute("src") || "";
   galleryLightboxImage.alt = image?.alt || "Réalisation LL Carrelage";
   if (galleryLightboxCaption) galleryLightboxCaption.textContent = item.dataset.galleryCaption || "Réalisation LL Carrelage";
   if (galleryLightboxCounter) galleryLightboxCounter.textContent = `${galleryCurrentIndex + 1} / ${galleryItems.length}`;
