@@ -12,6 +12,8 @@ const galleryClose = document.getElementById("galleryClose");
 const galleryPrevious = document.getElementById("galleryPrev");
 const galleryNext = document.getElementById("galleryNext");
 let galleryCurrentIndex = 0;
+let galleryTouchStartX = 0;
+let galleryTouchStartY = 0;
 
 function closeMenu() {
   if (!menuBtn || !navLinks) return;
@@ -110,7 +112,7 @@ function showGalleryImage(index) {
   const item = galleryItems[galleryCurrentIndex];
   const image = item.querySelector("img");
 
-  galleryLightboxImage.src = image?.getAttribute("src") || "";
+  galleryLightboxImage.src = image?.currentSrc || image?.getAttribute("src") || "";
   galleryLightboxImage.alt = image?.alt || "Réalisation LL Carrelage";
   if (galleryLightboxCaption) galleryLightboxCaption.textContent = item.dataset.galleryCaption || "Réalisation LL Carrelage";
   if (galleryLightboxCounter) galleryLightboxCounter.textContent = `${galleryCurrentIndex + 1} / ${galleryItems.length}`;
@@ -124,6 +126,7 @@ function openGallery(index) {
   } else {
     galleryLightbox.setAttribute("open", "");
   }
+  galleryLightbox.classList.add("is-open");
 }
 
 function closeGallery() {
@@ -133,6 +136,7 @@ function closeGallery() {
   } else {
     galleryLightbox.removeAttribute("open");
   }
+  galleryLightbox.classList.remove("is-open");
 }
 
 // Tarifs indicatifs faciles à ajuster au même endroit.
@@ -923,6 +927,11 @@ if (calculatorForm) {
 
 galleryItems.forEach((item, index) => {
   item.addEventListener("click", () => openGallery(index));
+  item.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    openGallery(index);
+  });
 });
 
 galleryClose?.addEventListener("click", closeGallery);
@@ -936,4 +945,24 @@ galleryLightbox?.addEventListener("click", (event) => {
 galleryLightbox?.addEventListener("keydown", (event) => {
   if (event.key === "ArrowLeft") showGalleryImage(galleryCurrentIndex - 1);
   if (event.key === "ArrowRight") showGalleryImage(galleryCurrentIndex + 1);
+  if (event.key === "Escape") closeGallery();
+});
+
+galleryLightbox?.addEventListener("touchstart", (event) => {
+  const touch = event.changedTouches?.[0];
+  if (!touch) return;
+  galleryTouchStartX = touch.clientX;
+  galleryTouchStartY = touch.clientY;
+}, { passive: true });
+
+galleryLightbox?.addEventListener("touchend", (event) => {
+  const touch = event.changedTouches?.[0];
+  if (!touch) return;
+
+  const deltaX = touch.clientX - galleryTouchStartX;
+  const deltaY = touch.clientY - galleryTouchStartY;
+  const isHorizontalSwipe = Math.abs(deltaX) > 55 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4;
+
+  if (!isHorizontalSwipe) return;
+  showGalleryImage(galleryCurrentIndex + (deltaX < 0 ? 1 : -1));
 });
