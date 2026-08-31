@@ -1,63 +1,63 @@
-﻿(function () {
+(function () {
   "use strict";
 
   const MINIMUM_INTERVENTION = 80;
 
   const projectRates = {
     interior: {
-      label: "Sol intÃ©rieur",
+      label: "Sol intérieur",
       rate: 30,
-      unitLabel: "mÂ²",
-      quantityLabel: "Surface en mÂ²",
-      quantityUnit: "mÂ²",
+      unitLabel: "m²",
+      quantityLabel: "Surface en m²",
+      quantityUnit: "m²",
       kind: "classic"
     },
     terrace: {
-      label: "Terrasse extÃ©rieure",
+      label: "Terrasse extérieure",
       rate: 35,
-      unitLabel: "mÂ²",
-      quantityLabel: "Surface en mÂ²",
-      quantityUnit: "mÂ²",
+      unitLabel: "m²",
+      quantityLabel: "Surface en m²",
+      quantityUnit: "m²",
       kind: "classic"
     },
     bathroom: {
       label: "Salle de bain",
       rate: 45,
-      unitLabel: "mÂ²",
-      quantityLabel: "Surface en mÂ²",
-      quantityUnit: "mÂ²",
+      unitLabel: "m²",
+      quantityLabel: "Surface en m²",
+      quantityUnit: "m²",
       kind: "classic"
     },
     walkInShower: {
       label: "Douche italienne",
       rate: 50,
-      unitLabel: "mÂ²",
-      quantityLabel: "Surface en mÂ²",
-      quantityUnit: "mÂ²",
+      unitLabel: "m²",
+      quantityLabel: "Surface en m²",
+      quantityUnit: "m²",
       kind: "classic"
     },
     kitchenWall: {
-      label: "FaÃ¯ence cuisine",
+      label: "Faïence cuisine",
       rate: 25,
-      unitLabel: "mÂ²",
-      quantityLabel: "Surface en mÂ²",
-      quantityUnit: "mÂ²",
+      unitLabel: "m²",
+      quantityLabel: "Surface en m²",
+      quantityUnit: "m²",
       kind: "classic"
     },
     bathroomWall: {
-      label: "FaÃ¯ence salle de bain",
+      label: "Faïence salle de bain",
       rate: 25,
-      unitLabel: "mÂ²",
-      quantityLabel: "Surface en mÂ²",
-      quantityUnit: "mÂ²",
+      unitLabel: "m²",
+      quantityLabel: "Surface en m²",
+      quantityUnit: "m²",
       kind: "classic"
     },
     stairs: {
       label: "Escalier",
       rate: 50,
-      unitLabel: "mÂ²",
-      quantityLabel: "Surface en mÂ²",
-      quantityUnit: "mÂ²",
+      unitLabel: "m²",
+      quantityLabel: "Surface en m²",
+      quantityUnit: "m²",
       kind: "classic"
     },
     baseboardsOnly: {
@@ -69,7 +69,7 @@
       kind: "baseboards"
     },
     brokenTiles: {
-      label: "Remplacement de carreaux cassÃ©s",
+      label: "Remplacement de carreaux cassés",
       rate: 40,
       unitLabel: "carreau",
       quantityLabel: "Nombre de carreaux",
@@ -77,17 +77,17 @@
       kind: "brokenTiles"
     },
     groutOnly: {
-      label: "RÃ©fection des joints uniquement",
+      label: "Réfection des joints uniquement",
       rate: 15,
-      unitLabel: "mÂ²",
-      quantityLabel: "Surface en mÂ²",
-      quantityUnit: "mÂ²",
+      unitLabel: "m²",
+      quantityLabel: "Surface en m²",
+      quantityUnit: "m²",
       kind: "grout"
     }
   };
 
   const formatRates = {
-    none: { label: "Aucun supplÃ©ment format", rate: 0 },
+    none: { label: "Aucun supplément format", rate: 0 },
     small: { label: "Petit format", rate: 5 },
     large80: { label: "80 x 80", rate: 10 },
     large120: { label: "120 x 120", rate: 15 }
@@ -102,24 +102,24 @@
   };
 
   const removalRates = {
-    none: { label: "Aucune dÃ©pose", rate: 0 },
-    tiles: { label: "DÃ©pose carrelage", rate: 15 },
-    parquet: { label: "DÃ©pose parquet", rate: 10 },
-    softFloor: { label: "DÃ©pose PVC / moquette", rate: 7 }
+    none: { label: "Aucune dépose", rate: 0 },
+    tiles: { label: "Dépose carrelage", rate: 15 },
+    parquet: { label: "Dépose parquet", rate: 10 },
+    softFloor: { label: "Dépose PVC / moquette", rate: 7 }
   };
 
   const prepRates = {
-    none: { label: "Aucune prÃ©paration", rate: 0 },
-    lightLeveling: { label: "RagrÃ©age lÃ©ger", rate: 8 },
-    heavyLeveling: { label: "RagrÃ©age important", rate: 15 },
-    sanding: { label: "PonÃ§age / nettoyage", rate: 5 },
+    none: { label: "Aucune préparation", rate: 0 },
+    lightLeveling: { label: "Ragréage léger", rate: 8 },
+    heavyLeveling: { label: "Ragréage important", rate: 15 },
+    sanding: { label: "Ponçage / nettoyage", rate: 5 },
     primer: { label: "Primaire d'accrochage", rate: 3 }
   };
 
   const waterproofRates = {
-    none: { label: "Aucune Ã©tanchÃ©itÃ©", rate: 0 },
+    none: { label: "Aucune étanchéité", rate: 0 },
     spec: { label: "SPEC sous carrelage", rate: 12 },
-    mat: { label: "Natte d'Ã©tanchÃ©itÃ© / dÃ©solidarisation", rate: 18 }
+    mat: { label: "Natte d'étanchéité / désolidarisation", rate: 18 }
   };
 
   const suppliesLabels = {
@@ -222,9 +222,9 @@
     if (quantity > 0) {
       baseAmount = lineAmount(quantity, project.rate);
       laborSubtotal += baseAmount;
-      addLine(lines, `${project.label} - ${formatQuantity(quantity)} ${unit} x ${project.rate} â‚¬/${unit}`, baseAmount, true);
+      addLine(lines, `${project.label} - ${formatQuantity(quantity)} ${unit} x ${project.rate} €/${unit}`, baseAmount, true);
     } else {
-      addLine(lines, `${project.label} - quantitÃ© Ã  renseigner`, 0, true);
+      addLine(lines, `${project.label} - quantité à renseigner`, 0, true);
     }
 
     if (isBrokenTiles) {
@@ -235,7 +235,7 @@
       }
     } else if (isClassic) {
       const format = formatRates[state.tileFormat] || formatRates.none;
-      addLine(lines, `${format.label} - ${format.rate} â‚¬/${unit}`, lineAmount(quantity, format.rate), false);
+      addLine(lines, `${format.label} - ${format.rate} €/${unit}`, lineAmount(quantity, format.rate), false);
       laborSubtotal += lineAmount(quantity, format.rate);
 
       state.supports.forEach((supportKey) => {
@@ -244,13 +244,13 @@
         if (!support) return;
         const amount = lineAmount(quantity, support.rate);
         laborSubtotal += amount;
-        addLine(lines, `${support.label} - ${support.rate} â‚¬/${unit}`, amount, false);
+        addLine(lines, `${support.label} - ${support.rate} €/${unit}`, amount, false);
       });
 
       const removal = removalRates[state.removal] || removalRates.none;
       const removalAmount = lineAmount(quantity, removal.rate);
       laborSubtotal += removalAmount;
-      addLine(lines, `${removal.label} - ${removal.rate} â‚¬/${unit}`, removalAmount, false);
+      addLine(lines, `${removal.label} - ${removal.rate} €/${unit}`, removalAmount, false);
 
       state.prep.forEach((prepKey) => {
         if (prepKey === "none") return;
@@ -258,38 +258,38 @@
         if (!prep) return;
         const amount = lineAmount(quantity, prep.rate);
         laborSubtotal += amount;
-        addLine(lines, `${prep.label} - ${prep.rate} â‚¬/${unit}`, amount, false);
+        addLine(lines, `${prep.label} - ${prep.rate} €/${unit}`, amount, false);
       });
 
       const waterproof = waterproofRates[state.waterproof] || waterproofRates.none;
       const waterproofAmount = lineAmount(quantity, waterproof.rate);
       laborSubtotal += waterproofAmount;
-      addLine(lines, `${waterproof.label} - ${waterproof.rate} â‚¬/${unit}`, waterproofAmount, false);
+      addLine(lines, `${waterproof.label} - ${waterproof.rate} €/${unit}`, waterproofAmount, false);
     }
 
     if (project.kind !== "baseboards" && project.kind !== "brokenTiles" && project.kind !== "grout") {
       if (state.extraBaseboardsEnabled) {
         const baseboardsAmount = lineAmount(state.extraBaseboardsLength, 10);
         laborSubtotal += baseboardsAmount;
-        addLine(lines, `Plinthes en plus - ${formatQuantity(state.extraBaseboardsLength)} ml x 10 â‚¬/ml`, baseboardsAmount, false);
+        addLine(lines, `Plinthes en plus - ${formatQuantity(state.extraBaseboardsLength)} ml x 10 €/ml`, baseboardsAmount, false);
       }
     }
 
     if (state.siliconeEnabled) {
       const siliconeAmount = lineAmount(state.siliconeLength, 8);
       laborSubtotal += siliconeAmount;
-      addLine(lines, `Joint silicone - ${formatQuantity(state.siliconeLength)} ml x 8 â‚¬/ml`, siliconeAmount, false);
+      addLine(lines, `Joint silicone - ${formatQuantity(state.siliconeLength)} ml x 8 €/ml`, siliconeAmount, false);
     }
 
     if (state.profileEnabled) {
       const profileAmount = lineAmount(state.profileLength, 10);
       laborSubtotal += profileAmount;
-      addLine(lines, `ProfilÃ©s de finition - ${formatQuantity(state.profileLength)} ml x 10 â‚¬/ml`, profileAmount, false);
+      addLine(lines, `Profilés de finition - ${formatQuantity(state.profileLength)} ml x 10 €/ml`, profileAmount, false);
     }
 
     const thresholdAmount = lineAmount(Math.floor(state.thresholdCount), 25);
     laborSubtotal += thresholdAmount;
-    addLine(lines, `Seuils / petites finitions - ${Math.floor(state.thresholdCount)} x 25 â‚¬`, thresholdAmount, false);
+    addLine(lines, `Seuils / petites finitions - ${Math.floor(state.thresholdCount)} x 25 €`, thresholdAmount, false);
 
     const marginRate = isBrokenTiles ? 0 : state.marginRate;
     const marginAmount = laborSubtotal > 0 ? laborSubtotal * marginRate : 0;
@@ -298,7 +298,7 @@
     if (laborSubtotal > 0 && laborSubtotal + marginAmount < MINIMUM_INTERVENTION) {
       minimumAddition = MINIMUM_INTERVENTION - laborSubtotal - marginAmount;
       laborSubtotal += minimumAddition;
-      addLine(lines, "Minimum gÃ©nÃ©ral d'intervention", minimumAddition, false);
+      addLine(lines, "Minimum général d'intervention", minimumAddition, false);
     }
 
     const suppliesAmount = state.suppliesEstimate;
@@ -307,9 +307,9 @@
     const roundedTotal = roundEuro(total);
 
     addLine(lines, suppliesLabels[state.suppliesType] || suppliesLabels.clientAll, suppliesAmount, suppliesAmount > 0);
-    addLine(lines, "DÃ©placement", state.travelCost, state.travelCost > 0);
+    addLine(lines, "Déplacement", state.travelCost, state.travelCost > 0);
     addLine(lines, "Autres frais", state.otherCost, state.otherCost > 0);
-    addLine(lines, `Marge imprÃ©vu ${Math.round(marginRate * 100)} %`, marginAmount, marginAmount > 0);
+    addLine(lines, `Marge imprévu ${Math.round(marginRate * 100)} %`, marginAmount, marginAmount > 0);
 
     return {
       project,
@@ -532,7 +532,7 @@
   }
 
   function getClientText() {
-    return `Estimation indicative : environ ${formatCurrency(lastCalculation.total)}, Ã  confirmer aprÃ¨s visite et Ã©tablissement du devis dÃ©finitif.`;
+    return `Estimation indicative : environ ${formatCurrency(lastCalculation.total)}, à confirmer après visite et établissement du devis définitif.`;
   }
 
   function getDetailText() {
@@ -548,11 +548,11 @@
       "",
       detailLines,
       "",
-      `Main-d'Å“uvre : ${formatCurrency(lastCalculation.laborAmount)}`,
+      `Main-d'œuvre : ${formatCurrency(lastCalculation.laborAmount)}`,
       `Fournitures : ${formatCurrency(lastCalculation.suppliesAmount)}`,
-      `DÃ©placement + frais : ${formatCurrency(lastCalculation.feesAmount)}`,
-      `Marge imprÃ©vu : ${formatCurrency(lastCalculation.marginAmount)}`,
-      `Total estimÃ© : ${formatCurrency(lastCalculation.total)}`,
+      `Déplacement + frais : ${formatCurrency(lastCalculation.feesAmount)}`,
+      `Marge imprévu : ${formatCurrency(lastCalculation.marginAmount)}`,
+      `Total estimé : ${formatCurrency(lastCalculation.total)}`,
       `Fourchette client : ${formatCurrency(lastCalculation.low)} - ${formatCurrency(lastCalculation.high)}`
     ].join("\n");
   }
@@ -607,10 +607,10 @@
 
     document.getElementById("resetButton").addEventListener("click", resetEstimator);
     document.getElementById("copyEstimateButton").addEventListener("click", () => {
-      copyText(getClientText(), "Estimation client copiÃ©e.");
+      copyText(getClientText(), "Estimation client copiée.");
     });
     document.getElementById("copyDetailButton").addEventListener("click", () => {
-      copyText(getDetailText(), "DÃ©tail chantier copiÃ©.");
+      copyText(getDetailText(), "Détail chantier copié.");
     });
   }
 
