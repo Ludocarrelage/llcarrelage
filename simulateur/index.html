@@ -389,9 +389,22 @@
           <section class="estimator-section">
             <div class="section-heading">
               <span>1</span>
-              <h2>Type de surface</h2>
+              <h2>Prestation principale</h2>
             </div>
-            <div class="choice-grid surface-grid" role="radiogroup" aria-label="Type de surface">
+            <label class="field-label" for="paintProjectType">Travaux à estimer</label>
+            <select id="paintProjectType">
+              <option value="walls">Peinture des murs — 2 couches</option>
+              <option value="ceiling">Peinture du plafond — 2 couches</option>
+              <option value="both">Peinture murs + plafond — 2 couches</option>
+              <option value="skimWalls">Ratissage complet des murs</option>
+              <option value="skimCeiling">Ratissage complet du plafond</option>
+              <option value="skimBoth">Ratissage complet murs + plafond</option>
+              <option value="packWalls">Pack complet — murs</option>
+              <option value="packCeiling">Pack complet — plafond</option>
+              <option value="packBoth">Pack complet — murs + plafond</option>
+            </select>
+            <p class="helper-text">Tu peux changer ce choix à tout moment : les sections et le calcul s'adaptent immédiatement.</p>
+            <div class="paint-hidden-controls" aria-hidden="true">
               <label class="option-card">
                 <input type="radio" name="paintSurfaceType" value="walls" checked />
                 <span class="option-title">Murs</span>
@@ -408,13 +421,7 @@
                 <span class="option-price">Deux surfaces</span>
               </label>
             </div>
-          </section>
-
-          <section class="estimator-section">
-            <div class="section-heading">
-              <span>2</span>
-              <h2>Surfaces</h2>
-            </div>
+            <div class="paint-surface-fields">
             <div id="paintWallsSurfaceField">
               <label class="field-label" for="paintWallsSurface">Surface murs</label>
               <div class="input-with-unit">
@@ -429,11 +436,13 @@
                 <span>m²</span>
               </div>
             </div>
+            </div>
+            <div class="paint-current-choice" id="paintCurrentChoice" aria-live="polite"></div>
           </section>
 
           <section class="estimator-section">
             <div class="section-heading">
-              <span>3</span>
+              <span>2</span>
               <h2>État du support</h2>
             </div>
             <div class="choice-grid support-condition-grid" role="radiogroup" aria-label="État du support">
@@ -463,8 +472,8 @@
 
           <section class="estimator-section">
             <div class="section-heading">
-              <span>4</span>
-              <h2>Préparation du support</h2>
+              <span>3</span>
+              <h2>Options de préparation</h2>
             </div>
             <label class="toggle-line paint-prep-option" id="paintPrepProtectionCard">
               <input id="paintProtectionToggle" type="checkbox" />
@@ -525,7 +534,7 @@
             </div>
           </section>
 
-          <section class="estimator-section">
+          <section class="estimator-section is-hidden" id="paintSkimSection">
             <div class="section-heading">
               <span>5</span>
               <h2>Ratissage</h2>
@@ -569,7 +578,7 @@
             </div>
           </section>
 
-          <section class="estimator-section" id="paintPaintingSection">
+          <section class="estimator-section is-hidden" id="paintPaintingSection">
             <div class="section-heading">
               <span>6</span>
               <h2>Peinture</h2>

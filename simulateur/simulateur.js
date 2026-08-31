@@ -939,6 +939,59 @@
     return checked ? checked.value : "";
   }
 
+  function setPaintingRadio(name, value) {
+    document.querySelectorAll(`input[name="${name}"]`).forEach((input) => {
+      input.checked = input.value === value;
+    });
+  }
+
+  function syncPaintingProjectType() {
+    const projectSelect = document.getElementById("paintProjectType");
+    if (!projectSelect) return;
+
+    const project = projectSelect.value;
+    const surfaceType = project.endsWith("Both") || project === "both"
+      ? "both"
+      : project.endsWith("Ceiling") || project === "ceiling"
+        ? "ceiling"
+        : "walls";
+    const skimMode = project.startsWith("pack") ? "pack" : project.startsWith("skim") ? "skim" : "none";
+
+    setPaintingRadio("paintSurfaceType", surfaceType);
+    setPaintingRadio("paintSkimMode", skimMode);
+
+    const wallPaint = document.getElementById("paintWallPaintToggle");
+    const ceilingPaint = document.getElementById("paintCeilingPaintToggle");
+    const primaryToggle = document.getElementById("paintPrimaireToggle");
+    if (wallPaint) wallPaint.checked = skimMode !== "skim" && surfaceType !== "ceiling";
+    if (ceilingPaint) ceilingPaint.checked = skimMode !== "skim" && surfaceType !== "walls";
+    if (primaryToggle && skimMode !== "pack" && primaryToggle.disabled) primaryToggle.checked = false;
+
+    updatePaintingSurfaceMode(false);
+    syncPaintingMainSurface();
+
+    const labels = {
+      walls: "Peinture murs · 15 €/m²",
+      ceiling: "Peinture plafond · 18 €/m²",
+      both: "Peinture murs + plafond",
+      skimWalls: "Ratissage murs · 12 €/m²",
+      skimCeiling: "Ratissage plafond · 12 €/m²",
+      skimBoth: "Ratissage murs + plafond · 12 €/m²",
+      packWalls: "Pack murs · ratissage + primaire + peinture · 30 €/m²",
+      packCeiling: "Pack plafond · ratissage + primaire + peinture · 30 €/m²",
+      packBoth: "Pack murs + plafond · ratissage + primaire + peinture · 30 €/m²"
+    };
+    setText("paintCurrentChoice", labels[project] || "");
+  }
+
+  function syncPaintingMainSurface() {
+    const project = document.getElementById("paintProjectType")?.value || "walls";
+    const totalSurface = getVisiblePaintingSurface();
+    const targetId = project.startsWith("pack") ? "paintPackSurface" : project.startsWith("skim") ? "paintSkimSurface" : "";
+    const target = targetId ? document.getElementById(targetId) : null;
+    if (target) target.value = String(totalSurface);
+  }
+
   function readPaintingState() {
     return {
       surfaceType: getPaintingRadio("paintSurfaceType") || "walls",
@@ -1113,6 +1166,9 @@
 
   function resetPaintingEstimator() {
     paintingForm.reset();
+    const projectSelect = document.getElementById("paintProjectType");
+    if (projectSelect) projectSelect.value = "walls";
+    syncPaintingProjectType();
     updatePaintingInterface(true);
     paintCopyStatus.textContent = "";
   }
@@ -1173,6 +1229,12 @@
 
     if (!target) return;
 
+    if (target.id === "paintProjectType") {
+      syncPaintingProjectType();
+      updatePaintingInterface(false);
+      return;
+    }
+
     if (target.name === "paintSurfaceType") {
       updatePaintingSurfaceMode(true);
     }
@@ -1213,10 +1275,14 @@
   function initPaintingEstimator() {
     if (!paintingForm) return;
 
+    syncPaintingProjectType();
     updatePaintingInterface(true);
 
     paintingForm.addEventListener("input", (event) => {
       if (event.target && event.target.matches('input[type="number"]')) {
+        if (event.target.id === "paintWallsSurface" || event.target.id === "paintCeilingSurface") {
+          syncPaintingMainSurface();
+        }
         updatePaintingEstimate();
       }
     });
