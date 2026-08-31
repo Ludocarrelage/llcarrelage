@@ -512,3 +512,169 @@ input[type="number"]:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+.mode-chooser {
+  margin-bottom: 16px;
+  padding: 16px;
+}
+
+.mode-chooser h2 {
+  color: var(--dark);
+  font-size: 1.08rem;
+  line-height: 1.2;
+  margin: 4px 0 12px;
+}
+
+.mode-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.mode-card {
+  background: #fff;
+  border: 1px solid rgba(38, 54, 59, 0.15);
+  border-radius: 18px;
+  color: var(--ink);
+  display: grid;
+  gap: 5px;
+  min-height: 74px;
+  padding: 14px;
+  text-align: left;
+  transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.mode-card span {
+  color: var(--dark);
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.15;
+  text-transform: uppercase;
+}
+
+.mode-card strong {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.mode-card:hover,
+.mode-card:focus-visible {
+  border-color: rgba(239, 104, 30, 0.5);
+  box-shadow: 0 12px 30px rgba(239, 104, 30, 0.12);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.mode-card.is-active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  box-shadow: 0 14px 34px rgba(239, 104, 30, 0.16);
+}
+
+.mode-panel {
+  display: none;
+}
+
+.mode-panel.is-active {
+  animation: panelFade 0.22s ease both;
+  display: block;
+}
+
+.mode-change-button {
+  background: rgba(255, 255, 255, 0.76);
+  border: 1px solid rgba(38, 54, 59, 0.15);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 800;
+  margin: 0 0 10px;
+  min-height: 44px;
+  padding: 0 14px;
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+.helper-text {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-top: 10px;
+}
+
+.option-description {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 700;
+  grid-column: 2;
+  line-height: 1.35;
+}
+
+.option-with-description {
+  align-items: start;
+  min-height: 88px;
+}
+
+.paint-prep-option.is-suggested,
+#paintSkimCard.is-suggested,
+#paintPackCard.is-suggested {
+  border-color: rgba(239, 104, 30, 0.6);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.paint-prep-option.is-pack-included {
+  background: rgba(38, 54, 59, 0.06);
+}
+
+.paint-prep-option.is-pack-included strong,
+#paintWallPaintCard.is-pack-included strong,
+#paintCeilingPaintCard.is-pack-included strong {
+  color: var(--muted);
+}
+
+.included-list {
+  background: rgba(239, 104, 30, 0.08);
+  border: 1px solid rgba(239, 104, 30, 0.18);
+  border-radius: 16px;
+  color: var(--ink);
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.included-list strong,
+.included-list span {
+  font-size: 0.94rem;
+  line-height: 1.25;
+}
+
+.painting-summary-list {
+  gap: 7px;
+}
+
+.painting-summary-list div {
+  min-height: 44px;
+}
+
+@keyframes panelFade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 560px) {
+  .mode-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
