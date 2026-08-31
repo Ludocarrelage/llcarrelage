@@ -291,15 +291,16 @@
     laborSubtotal += thresholdAmount;
     addLine(lines, `Seuils / petites finitions - ${Math.floor(state.thresholdCount)} x 25 €`, thresholdAmount, false);
 
-    const marginRate = isBrokenTiles ? 0 : state.marginRate;
-    const marginAmount = laborSubtotal > 0 ? laborSubtotal * marginRate : 0;
     let minimumAddition = 0;
 
-    if (laborSubtotal > 0 && laborSubtotal + marginAmount < MINIMUM_INTERVENTION) {
-      minimumAddition = MINIMUM_INTERVENTION - laborSubtotal - marginAmount;
+    if (laborSubtotal > 0 && laborSubtotal < MINIMUM_INTERVENTION) {
+      minimumAddition = MINIMUM_INTERVENTION - laborSubtotal;
       laborSubtotal += minimumAddition;
       addLine(lines, "Minimum général d'intervention", minimumAddition, false);
     }
+
+    const marginRate = isBrokenTiles ? 0 : state.marginRate;
+    const marginAmount = laborSubtotal > 0 ? laborSubtotal * marginRate : 0;
 
     const suppliesAmount = state.suppliesEstimate;
     const feesAmount = state.travelCost + state.otherCost;
