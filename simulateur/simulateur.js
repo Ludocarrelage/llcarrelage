@@ -130,6 +130,61 @@
     allSupplies: "Je fournis tout"
   };
 
+  const paintingRates = {
+    lessivageMurs: { label: "Lessivage murs", rate: 3, unit: "m²" },
+    poncageLeger: { label: "Ponçage léger", rate: 4, unit: "m²" },
+    rebouchageLocalise: { label: "Rebouchage localisé", rate: 6, unit: "m²" },
+    ratissageMurs: { label: "Ratissage complet murs", rate: 15, unit: "m²" },
+    ratissagePlafond: { label: "Ratissage complet plafond", rate: 20, unit: "m²" },
+    primaire: { label: "Primaire / sous-couche", rate: 5, unit: "m²" },
+    peintureMurs: { label: "Peinture murs - 2 couches", rate: 20, unit: "m²" },
+    peinturePlafond: { label: "Peinture plafond - 2 couches", rate: 25, unit: "m²" },
+    packMurs: { label: "Ratissage + primaire + peinture murs", rate: 38, unit: "m²" },
+    packPlafond: { label: "Ratissage + primaire + peinture plafond", rate: 48, unit: "m²" }
+  };
+
+  const paintingSurfaceLabels = {
+    walls: "Murs",
+    ceiling: "Plafond",
+    both: "Murs + plafond"
+  };
+
+  const paintingSuppliesLabels = {
+    client: "Client fournit les produits",
+    artisan: "Je fournis peinture / produits"
+  };
+
+  const paintingSupportHints = {
+    good: "Peinture simple possible si le support est propre et sain.",
+    medium: "Vérifier ponçage, rebouchage et primaire.",
+    bad: "Ratissage complet probablement à prévoir."
+  };
+
+  const paintingDefaultTask = { enabled: false, surface: 0 };
+
+  const paintingDefaultState = {
+    surfaceType: "walls",
+    wallsSurface: 0,
+    ceilingSurface: 0,
+    supportCondition: "good",
+    lessivageMurs: { ...paintingDefaultTask },
+    sanding: { ...paintingDefaultTask },
+    patching: { ...paintingDefaultTask },
+    wallSkim: { ...paintingDefaultTask },
+    ceilingSkim: { ...paintingDefaultTask },
+    wallPrimer: { ...paintingDefaultTask },
+    ceilingPrimer: { ...paintingDefaultTask },
+    wallPaint: { ...paintingDefaultTask },
+    ceilingPaint: { ...paintingDefaultTask },
+    wallPack: { ...paintingDefaultTask },
+    ceilingPack: { ...paintingDefaultTask },
+    suppliesType: "client",
+    suppliesEstimate: 0,
+    travelCost: 0,
+    otherCost: 0,
+    marginRate: 0.05
+  };
+
   const defaultPrepSurfaces = {
     lightLeveling: 0,
     heavyLeveling: 0,
@@ -464,6 +519,130 @@
     };
   }
 
+  function normalizePaintingTask(task) {
+    return {
+      enabled: Boolean(task && task.enabled),
+      surface: numberValue(task && task.surface)
+    };
+  }
+
+  function normalizePaintingState(inputState) {
+    const source = inputState || {};
+    const surfaceType = Object.keys(paintingSurfaceLabels).includes(source.surfaceType)
+      ? source.surfaceType
+      : paintingDefaultState.surfaceType;
+
+    return {
+      surfaceType,
+      wallsSurface: surfaceType === "ceiling" ? 0 : numberValue(source.wallsSurface),
+      ceilingSurface: surfaceType === "walls" ? 0 : numberValue(source.ceilingSurface),
+      supportCondition: Object.keys(paintingSupportHints).includes(source.supportCondition) ? source.supportCondition : "good",
+      lessivageMurs: normalizePaintingTask(source.lessivageMurs),
+      sanding: normalizePaintingTask(source.sanding),
+      patching: normalizePaintingTask(source.patching),
+      wallSkim: normalizePaintingTask(source.wallSkim),
+      ceilingSkim: normalizePaintingTask(source.ceilingSkim),
+      wallPrimer: normalizePaintingTask(source.wallPrimer),
+      ceilingPrimer: normalizePaintingTask(source.ceilingPrimer),
+      wallPaint: normalizePaintingTask(source.wallPaint),
+      ceilingPaint: normalizePaintingTask(source.ceilingPaint),
+      wallPack: normalizePaintingTask(source.wallPack),
+      ceilingPack: normalizePaintingTask(source.ceilingPack),
+      suppliesType: Object.keys(paintingSuppliesLabels).includes(source.suppliesType) ? source.suppliesType : "client",
+      suppliesEstimate: numberValue(source.suppliesEstimate),
+      travelCost: numberValue(source.travelCost),
+      otherCost: numberValue(source.otherCost),
+      marginRate: numberValue(source.marginRate)
+    };
+  }
+
+  function addPaintingSurfaceLine(lines, warnings, task, rate, mainSurface, isRelevant) {
+    if (!isRelevant || !task.enabled) {
+      return 0;
+    }
+
+    const amount = lineAmount(task.surface, rate.rate);
+    addLine(lines, buildSurfaceLine(rate.label, task.surface, rate.rate), amount, true);
+    warnIfSurfaceAboveMain(warnings, rate.label, task.surface, mainSurface);
+
+    if (task.surface <= 0) {
+      addWarning(warnings, `${rate.label} : renseigner la surface concernée.`);
+    }
+
+    return amount;
+  }
+
+  function warnIfPaintingOverlap(warnings, mainSurface, packTask, otherTasks) {
+    if (!packTask.enabled || packTask.surface <= 0 || mainSurface <= 0) {
+      return;
+    }
+
+    const hasOverlap = otherTasks.some((task) => task.enabled && task.surface > 0 && task.surface + packTask.surface > mainSurface);
+    if (hasOverlap) {
+      addWarning(warnings, "Vérifier les surfaces : certaines prestations peuvent se chevaucher.");
+    }
+  }
+
+  function calculatePaintingEstimate(inputState) {
+    const state = normalizePaintingState(inputState);
+    const lines = [];
+    const warnings = [];
+    const hasWalls = state.surfaceType === "walls" || state.surfaceType === "both";
+    const hasCeiling = state.surfaceType === "ceiling" || state.surfaceType === "both";
+    const totalSurface = state.wallsSurface + state.ceilingSurface;
+    let laborSubtotal = 0;
+
+    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.lessivageMurs, paintingRates.lessivageMurs, state.wallsSurface, hasWalls);
+    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.sanding, paintingRates.poncageLeger, totalSurface, hasWalls || hasCeiling);
+    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.patching, paintingRates.rebouchageLocalise, totalSurface, hasWalls || hasCeiling);
+    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.wallSkim, paintingRates.ratissageMurs, state.wallsSurface, hasWalls);
+    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.ceilingSkim, paintingRates.ratissagePlafond, state.ceilingSurface, hasCeiling);
+    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.wallPrimer, paintingRates.primaire, state.wallsSurface, hasWalls);
+    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.ceilingPrimer, paintingRates.primaire, state.ceilingSurface, hasCeiling);
+    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.wallPaint, paintingRates.peintureMurs, state.wallsSurface, hasWalls);
+    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.ceilingPaint, paintingRates.peinturePlafond, state.ceilingSurface, hasCeiling);
+    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.wallPack, paintingRates.packMurs, state.wallsSurface, hasWalls);
+    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.ceilingPack, paintingRates.packPlafond, state.ceilingSurface, hasCeiling);
+
+    warnIfPaintingOverlap(warnings, state.wallsSurface, state.wallPack, [state.wallSkim, state.wallPrimer, state.wallPaint]);
+    warnIfPaintingOverlap(warnings, state.ceilingSurface, state.ceilingPack, [state.ceilingSkim, state.ceilingPrimer, state.ceilingPaint]);
+
+    if (!lines.length) {
+      addLine(lines, "Aucune prestation peinture sélectionnée", 0, true);
+    }
+
+    if (laborSubtotal > 0 && laborSubtotal < MINIMUM_INTERVENTION) {
+      const minimumAddition = MINIMUM_INTERVENTION - laborSubtotal;
+      laborSubtotal += minimumAddition;
+      addLine(lines, "Minimum général d'intervention", minimumAddition, false);
+    }
+
+    const marginAmount = laborSubtotal > 0 ? laborSubtotal * state.marginRate : 0;
+    const suppliesAmount = state.suppliesEstimate;
+    const feesAmount = state.travelCost + state.otherCost;
+    const total = laborSubtotal + marginAmount + suppliesAmount + feesAmount;
+    const roundedTotal = roundEuro(total);
+
+    addLine(lines, paintingSuppliesLabels[state.suppliesType] || paintingSuppliesLabels.client, suppliesAmount, suppliesAmount > 0);
+    addLine(lines, "Déplacement", state.travelCost, state.travelCost > 0);
+    addLine(lines, "Autres frais", state.otherCost, state.otherCost > 0);
+    addLine(lines, `Marge imprévu ${Math.round(state.marginRate * 100)} %`, marginAmount, marginAmount > 0);
+
+    return {
+      state,
+      surfaceLabel: paintingSurfaceLabels[state.surfaceType] || paintingSurfaceLabels.walls,
+      laborAmount: roundEuro(laborSubtotal),
+      suppliesAmount: roundEuro(suppliesAmount),
+      feesAmount: roundEuro(feesAmount),
+      marginAmount: roundEuro(marginAmount),
+      total: roundedTotal,
+      low: roundEuro(roundedTotal * 0.95),
+      high: roundEuro(roundedTotal * 1.1),
+      detailLines: lines,
+      warningLines: warnings
+    };
+  }
+
   function calculateProfitability(input) {
     const data = {
       totalClient: numberValue(input && input.totalClient),
@@ -526,8 +705,10 @@
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
       calculateEstimate,
+      calculatePaintingEstimate,
       calculateProfitability,
       projectRates,
+      paintingRates,
       formatRates,
       supportRates,
       removalRates,
@@ -550,6 +731,11 @@
   const warningBox = document.getElementById("estimateWarnings");
   const warningList = document.getElementById("warningList");
   const copyStatus = document.getElementById("copyStatus");
+  const paintingForm = document.getElementById("paintingEstimatorForm");
+  const paintDetailList = document.getElementById("paintDetailList");
+  const paintWarningBox = document.getElementById("paintEstimateWarnings");
+  const paintWarningList = document.getElementById("paintWarningList");
+  const paintCopyStatus = document.getElementById("paintCopyStatus");
 
   const surfaceInputs = {
     removalSurface: document.getElementById("removalSurface"),
@@ -561,6 +747,7 @@
   };
 
   let lastCalculation = calculateEstimate(defaultState);
+  let lastPaintingCalculation = calculatePaintingEstimate(paintingDefaultState);
 
   function getCheckedRadio(name) {
     const checked = document.querySelector(`input[name="${name}"]:checked`);
@@ -654,6 +841,304 @@
       const item = document.createElement("li");
       item.textContent = warning;
       warningList.appendChild(item);
+    });
+  }
+
+  function renderPaintingDetails(lines) {
+    if (!paintDetailList) return;
+
+    paintDetailList.innerHTML = "";
+    const visibleLines = lines.length ? lines : [{ label: "Aucune ligne pour le moment", amount: 0 }];
+
+    visibleLines.forEach((line) => {
+      const item = document.createElement("li");
+      const label = document.createElement("span");
+      const amount = document.createElement("strong");
+      label.textContent = line.label;
+      amount.textContent = formatCurrency(line.amount);
+      item.append(label, amount);
+      paintDetailList.appendChild(item);
+    });
+  }
+
+  function renderPaintingWarnings(warnings) {
+    if (!paintWarningBox || !paintWarningList) return;
+
+    paintWarningList.innerHTML = "";
+    paintWarningBox.hidden = warnings.length === 0;
+
+    warnings.forEach((warning) => {
+      const item = document.createElement("li");
+      item.textContent = warning;
+      paintWarningList.appendChild(item);
+    });
+  }
+
+  function readPaintingTask(toggleId, surfaceId) {
+    return {
+      enabled: isChecked(toggleId),
+      surface: getInputNumber(surfaceId)
+    };
+  }
+
+  function readPaintingState() {
+    return {
+      surfaceType: getCheckedRadio("paintSurfaceType") || "walls",
+      wallsSurface: getInputNumber("paintWallsSurface"),
+      ceilingSurface: getInputNumber("paintCeilingSurface"),
+      supportCondition: getCheckedRadio("paintSupportCondition") || "good",
+      lessivageMurs: readPaintingTask("paintLessivageToggle", "paintLessivageSurface"),
+      sanding: readPaintingTask("paintSandingToggle", "paintSandingSurface"),
+      patching: readPaintingTask("paintPatchingToggle", "paintPatchingSurface"),
+      wallSkim: readPaintingTask("paintWallSkimToggle", "paintWallSkimSurface"),
+      ceilingSkim: readPaintingTask("paintCeilingSkimToggle", "paintCeilingSkimSurface"),
+      wallPrimer: readPaintingTask("paintWallPrimerToggle", "paintWallPrimerSurface"),
+      ceilingPrimer: readPaintingTask("paintCeilingPrimerToggle", "paintCeilingPrimerSurface"),
+      wallPaint: readPaintingTask("paintWallPaintToggle", "paintWallPaintSurface"),
+      ceilingPaint: readPaintingTask("paintCeilingPaintToggle", "paintCeilingPaintSurface"),
+      wallPack: readPaintingTask("paintWallPackToggle", "paintWallPackSurface"),
+      ceilingPack: readPaintingTask("paintCeilingPackToggle", "paintCeilingPackSurface"),
+      suppliesType: getCheckedRadio("paintSuppliesType") || "client",
+      suppliesEstimate: getInputNumber("paintSuppliesEstimate"),
+      travelCost: getInputNumber("paintTravelCost"),
+      otherCost: getInputNumber("paintOtherCost"),
+      marginRate: numberValue(getCheckedRadio("paintMarginRate") || 0)
+    };
+  }
+
+  function setPaintingRelevance(selector, isRelevant) {
+    document.querySelectorAll(selector).forEach((element) => {
+      element.classList.toggle("paint-relevance-hidden", !isRelevant);
+    });
+  }
+
+  function syncPaintingSurfaceVisibility() {
+    const surfaceType = getCheckedRadio("paintSurfaceType") || "walls";
+    const hasWalls = surfaceType === "walls" || surfaceType === "both";
+    const hasCeiling = surfaceType === "ceiling" || surfaceType === "both";
+
+    setPaintingRelevance("[data-paint-area='walls'], .paint-relevant-walls", hasWalls);
+    setPaintingRelevance("[data-paint-area='ceiling'], .paint-relevant-ceiling", hasCeiling);
+  }
+
+  function syncPaintingSurfaceFields() {
+    document.querySelectorAll(".paint-surface-field[data-target]").forEach((field) => {
+      const toggle = document.getElementById(field.dataset.target);
+      const isRelevant = !field.classList.contains("paint-relevance-hidden");
+      field.classList.toggle("is-visible", Boolean(toggle && toggle.checked && isRelevant));
+    });
+  }
+
+  function getPaintingMainSurface(kind) {
+    if (kind === "walls") {
+      return getInputNumber("paintWallsSurface");
+    }
+
+    if (kind === "ceiling") {
+      return getInputNumber("paintCeilingSurface");
+    }
+
+    return getInputNumber("paintWallsSurface") + getInputNumber("paintCeilingSurface");
+  }
+
+  function prefillPaintingSurface(inputId, kind) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+
+    const currentValue = numberValue(input.value);
+    const sourceSurface = getPaintingMainSurface(kind);
+
+    if (currentValue <= 0 && sourceSurface > 0) {
+      input.value = formatInputValue(sourceSurface);
+    }
+  }
+
+  function updatePaintSupportHint() {
+    const hint = document.getElementById("paintSupportHint");
+    if (!hint) return;
+
+    const supportCondition = getCheckedRadio("paintSupportCondition") || "good";
+    hint.textContent = paintingSupportHints[supportCondition] || paintingSupportHints.good;
+  }
+
+  function updatePaintingQuickButtons() {
+    const surfaceType = getCheckedRadio("paintSurfaceType") || "walls";
+    const hasWalls = surfaceType === "walls" || surfaceType === "both";
+    const hasCeiling = surfaceType === "ceiling" || surfaceType === "both";
+
+    document.querySelectorAll("[data-paint-quick]").forEach((button) => {
+      const quick = button.dataset.paintQuick;
+      const needsWalls = quick === "wallsSimple" || quick === "wallPack";
+      const needsCeiling = quick === "ceilingSimple" || quick === "ceilingPack";
+      button.disabled = (needsWalls && !hasWalls) || (needsCeiling && !hasCeiling);
+    });
+  }
+
+  function handlePaintingActivation(target) {
+    if (!target || !target.checked) return;
+
+    const activationMap = {
+      paintLessivageToggle: ["paintLessivageSurface", "walls"],
+      paintSandingToggle: ["paintSandingSurface", "total"],
+      paintPatchingToggle: ["paintPatchingSurface", "total"],
+      paintWallSkimToggle: ["paintWallSkimSurface", "walls"],
+      paintCeilingSkimToggle: ["paintCeilingSkimSurface", "ceiling"],
+      paintWallPrimerToggle: ["paintWallPrimerSurface", "walls"],
+      paintCeilingPrimerToggle: ["paintCeilingPrimerSurface", "ceiling"],
+      paintWallPaintToggle: ["paintWallPaintSurface", "walls"],
+      paintCeilingPaintToggle: ["paintCeilingPaintSurface", "ceiling"],
+      paintWallPackToggle: ["paintWallPackSurface", "walls"],
+      paintCeilingPackToggle: ["paintCeilingPackSurface", "ceiling"]
+    };
+    const entry = activationMap[target.id];
+
+    if (entry) {
+      prefillPaintingSurface(entry[0], entry[1]);
+    }
+  }
+
+  function applyPaintingQuickChoice(choice) {
+    const quickMap = {
+      wallsSimple: ["paintWallPaintToggle", "paintWallPaintSurface", "walls"],
+      ceilingSimple: ["paintCeilingPaintToggle", "paintCeilingPaintSurface", "ceiling"],
+      wallPack: ["paintWallPackToggle", "paintWallPackSurface", "walls"],
+      ceilingPack: ["paintCeilingPackToggle", "paintCeilingPackSurface", "ceiling"]
+    };
+    const entry = quickMap[choice];
+
+    if (!entry) return;
+
+    const toggle = document.getElementById(entry[0]);
+    if (!toggle || toggle.disabled) return;
+
+    toggle.checked = true;
+    prefillPaintingSurface(entry[1], entry[2]);
+    syncPaintingSurfaceFields();
+    updatePaintingEstimate();
+  }
+
+  function updatePaintingEstimate() {
+    if (!paintingForm) return;
+
+    lastPaintingCalculation = calculatePaintingEstimate(readPaintingState());
+    setText("paintTotalAmount", formatCurrency(lastPaintingCalculation.total));
+    setText("paintClientRange", `Fourchette client : ${formatCurrency(lastPaintingCalculation.low)} - ${formatCurrency(lastPaintingCalculation.high)}`);
+    setText("paintLaborAmount", formatCurrency(lastPaintingCalculation.laborAmount));
+    setText("paintSuppliesAmount", formatCurrency(lastPaintingCalculation.suppliesAmount));
+    setText("paintFeesAmount", formatCurrency(lastPaintingCalculation.feesAmount));
+    setText("paintMarginAmount", formatCurrency(lastPaintingCalculation.marginAmount));
+    renderPaintingWarnings(lastPaintingCalculation.warningLines);
+    renderPaintingDetails(lastPaintingCalculation.detailLines);
+  }
+
+  function resetPaintingEstimator() {
+    if (!paintingForm) return;
+
+    paintingForm.reset();
+    syncPaintingSurfaceVisibility();
+    syncPaintingSurfaceFields();
+    updatePaintSupportHint();
+    updatePaintingQuickButtons();
+    updatePaintingEstimate();
+
+    if (paintCopyStatus) {
+      paintCopyStatus.textContent = "";
+    }
+  }
+
+  function getPaintingDetailText() {
+    const result = lastPaintingCalculation;
+    const state = result.state;
+    const detailLines = result.detailLines
+      .map((line) => `${line.label} : ${formatCurrency(line.amount)}`)
+      .join("\n");
+    const surfaces = [
+      state.wallsSurface > 0 ? `Murs : ${formatQuantity(state.wallsSurface)} m²` : "",
+      state.ceilingSurface > 0 ? `Plafond : ${formatQuantity(state.ceilingSurface)} m²` : ""
+    ].filter(Boolean).join("\n");
+
+    return [
+      "LL Carrelage - estimation peinture",
+      `Type de surface : ${result.surfaceLabel}`,
+      surfaces || "Surface : à renseigner",
+      "",
+      detailLines,
+      "",
+      `Prestations : ${formatCurrency(result.laborAmount)}`,
+      `Fournitures : ${formatCurrency(result.suppliesAmount)}`,
+      `Déplacement + frais : ${formatCurrency(result.feesAmount)}`,
+      `Marge imprévu : ${formatCurrency(result.marginAmount)}`,
+      `Total estimé : ${formatCurrency(result.total)}`,
+      `Fourchette client : ${formatCurrency(result.low)} - ${formatCurrency(result.high)}`
+    ].join("\n");
+  }
+
+  function setEstimatorMode(mode) {
+    const activeMode = mode === "peinture" ? "peinture" : "carrelage";
+
+    document.querySelectorAll("[data-mode-button]").forEach((button) => {
+      const isActive = button.dataset.modeButton === activeMode;
+      button.classList.toggle("is-active", isActive);
+      button.setAttribute("aria-pressed", String(isActive));
+    });
+
+    document.querySelectorAll("[data-mode-panel]").forEach((panel) => {
+      const isActive = panel.dataset.modePanel === activeMode;
+      panel.classList.toggle("is-active", isActive);
+      panel.hidden = !isActive;
+      panel.setAttribute("aria-hidden", String(!isActive));
+    });
+  }
+
+  function initModeSwitcher() {
+    document.querySelectorAll("[data-mode-button]").forEach((button) => {
+      button.addEventListener("click", () => {
+        setEstimatorMode(button.dataset.modeButton);
+      });
+    });
+
+    setEstimatorMode("carrelage");
+  }
+
+  function initPaintingEstimator() {
+    if (!paintingForm) return;
+
+    syncPaintingSurfaceVisibility();
+    syncPaintingSurfaceFields();
+    updatePaintSupportHint();
+    updatePaintingQuickButtons();
+    updatePaintingEstimate();
+
+    paintingForm.addEventListener("input", () => {
+      updatePaintingEstimate();
+    });
+
+    paintingForm.addEventListener("change", (event) => {
+      const target = event.target;
+
+      if (target && target.name === "paintSurfaceType") {
+        syncPaintingSurfaceVisibility();
+        updatePaintingQuickButtons();
+      }
+
+      if (target && target.name === "paintSupportCondition") {
+        updatePaintSupportHint();
+      }
+
+      handlePaintingActivation(target);
+      syncPaintingSurfaceFields();
+      updatePaintingEstimate();
+    });
+
+    document.querySelectorAll("[data-paint-quick]").forEach((button) => {
+      button.addEventListener("click", () => {
+        applyPaintingQuickChoice(button.dataset.paintQuick);
+      });
+    });
+
+    document.getElementById("paintResetButton").addEventListener("click", resetPaintingEstimator);
+    document.getElementById("paintCopyEstimateButton").addEventListener("click", () => {
+      copyText(getPaintingDetailText(), "Estimation peinture copiée.", paintCopyStatus);
     });
   }
 
@@ -928,7 +1413,7 @@
     ].join("\n");
   }
 
-  async function copyText(text, successMessage) {
+  async function copyText(text, successMessage, statusElement = copyStatus) {
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(text);
@@ -943,9 +1428,13 @@
         document.execCommand("copy");
         textarea.remove();
       }
-      copyStatus.textContent = successMessage;
+      if (statusElement) {
+        statusElement.textContent = successMessage;
+      }
     } catch (error) {
-      copyStatus.textContent = "Copie impossible sur ce navigateur.";
+      if (statusElement) {
+        statusElement.textContent = "Copie impossible sur ce navigateur.";
+      }
     }
   }
 
@@ -994,12 +1483,19 @@
     document.getElementById("copyDetailButton").addEventListener("click", () => {
       copyText(getDetailText(), "Détail chantier copié.");
     });
+
+    initModeSwitcher();
+    initPaintingEstimator();
   }
 
   window.LLJobEstimator = {
     calculateEstimate,
+    calculatePaintingEstimate,
     calculateProfitability,
+    readPaintingState,
     readState,
+    setEstimatorMode,
+    updatePaintingEstimate,
     updateEstimate
   };
 

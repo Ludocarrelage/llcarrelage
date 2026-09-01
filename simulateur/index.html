@@ -25,6 +25,22 @@
       </div>
     </header>
 
+    <section class="estimator-card mode-chooser" id="modeChooser" aria-labelledby="modeChooserTitle">
+      <p class="result-label">Type de travaux</p>
+      <h2 id="modeChooserTitle">Quel chantier veux-tu estimer ?</h2>
+      <div class="mode-grid">
+        <button class="mode-card is-active" type="button" data-mode-button="carrelage" aria-controls="carrelageEstimatorPanel" aria-pressed="true">
+          <span>Carrelage</span>
+          <strong>Sol, terrasse, salle de bain, faïence</strong>
+        </button>
+        <button class="mode-card" type="button" data-mode-button="peinture" aria-controls="paintingEstimatorPanel" aria-pressed="false">
+          <span>Peinture</span>
+          <strong>Murs, plafond, préparation, packs</strong>
+        </button>
+      </div>
+    </section>
+
+    <section class="estimator-mode-panel is-active" id="carrelageEstimatorPanel" data-mode-panel="carrelage" aria-label="Simulateur carrelage">
     <div class="estimator-layout">
       <form class="estimator-card estimator-form" id="jobEstimator" novalidate>
         <section class="estimator-section">
@@ -503,6 +519,387 @@
         </div>
       </aside>
     </div>
+
+    </section>
+
+    <section class="estimator-mode-panel" id="paintingEstimatorPanel" data-mode-panel="peinture" aria-label="Simulateur peinture" hidden>
+      <div class="estimator-layout">
+        <form class="estimator-card estimator-form" id="paintingEstimatorForm" novalidate>
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>1</span>
+              <h2>Type de surface</h2>
+            </div>
+            <div class="choice-grid" role="radiogroup" aria-label="Type de surface peinture">
+              <label class="option-card">
+                <input type="radio" name="paintSurfaceType" value="walls" checked />
+                <span class="option-title">Murs</span>
+                <span class="option-price">Surface murs</span>
+              </label>
+              <label class="option-card">
+                <input type="radio" name="paintSurfaceType" value="ceiling" />
+                <span class="option-title">Plafond</span>
+                <span class="option-price">Surface plafond</span>
+              </label>
+              <label class="option-card option-wide">
+                <input type="radio" name="paintSurfaceType" value="both" />
+                <span class="option-title">Murs + plafond</span>
+                <span class="option-price">Deux surfaces séparées</span>
+              </label>
+            </div>
+          </section>
+
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>2</span>
+              <h2>Surface</h2>
+            </div>
+            <div class="paint-surface-grid">
+              <div id="paintWallsSurfaceGroup" data-paint-area="walls">
+                <label class="field-label" for="paintWallsSurface">Surface murs</label>
+                <div class="input-with-unit compact-unit">
+                  <input id="paintWallsSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                  <span>m²</span>
+                </div>
+              </div>
+              <div id="paintCeilingSurfaceGroup" data-paint-area="ceiling">
+                <label class="field-label" for="paintCeilingSurface">Surface plafond</label>
+                <div class="input-with-unit compact-unit">
+                  <input id="paintCeilingSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                  <span>m²</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>3</span>
+              <h2>Choix rapide</h2>
+            </div>
+            <div class="quick-grid">
+              <button class="quick-card" type="button" data-paint-quick="wallsSimple">
+                <span>Peinture murs simple</span>
+                <strong>Active peinture murs</strong>
+              </button>
+              <button class="quick-card" type="button" data-paint-quick="ceilingSimple">
+                <span>Peinture plafond simple</span>
+                <strong>Active peinture plafond</strong>
+              </button>
+              <button class="quick-card" type="button" data-paint-quick="wallPack">
+                <span>Pack complet murs</span>
+                <strong>Ratissage + primaire + peinture</strong>
+              </button>
+              <button class="quick-card" type="button" data-paint-quick="ceilingPack">
+                <span>Pack complet plafond</span>
+                <strong>Ratissage + primaire + peinture</strong>
+              </button>
+            </div>
+            <p class="section-note" id="paintQuickHint" aria-live="polite">Les raccourcis préremplissent seulement les champs vides.</p>
+          </section>
+
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>i</span>
+              <h2>État du support</h2>
+            </div>
+            <div class="choice-grid" role="radiogroup" aria-label="État du support peinture">
+              <label class="option-card">
+                <input type="radio" name="paintSupportCondition" value="good" checked />
+                <span class="option-title">Bon état</span>
+                <span class="option-price">Indicatif</span>
+              </label>
+              <label class="option-card">
+                <input type="radio" name="paintSupportCondition" value="medium" />
+                <span class="option-title">État moyen</span>
+                <span class="option-price">Indicatif</span>
+              </label>
+              <label class="option-card option-wide">
+                <input type="radio" name="paintSupportCondition" value="bad" />
+                <span class="option-title">Mauvais / irrégulier</span>
+                <span class="option-price">Indicatif</span>
+              </label>
+            </div>
+            <p class="section-note" id="paintSupportHint">Peinture simple possible si le support est propre et sain.</p>
+          </section>
+
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>4</span>
+              <h2>Préparation</h2>
+            </div>
+            <label class="toggle-line paint-relevant-walls" id="paintLessivageCard">
+              <input id="paintLessivageToggle" type="checkbox" />
+              <span>Lessivage murs</span>
+              <strong>3 €/m²</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field paint-relevant-walls" data-target="paintLessivageToggle">
+              <label class="field-label" for="paintLessivageSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintLessivageSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>m²</span>
+              </div>
+            </div>
+
+            <label class="toggle-line">
+              <input id="paintSandingToggle" type="checkbox" />
+              <span>Ponçage léger</span>
+              <strong>4 €/m²</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field" data-target="paintSandingToggle">
+              <label class="field-label" for="paintSandingSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintSandingSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>m²</span>
+              </div>
+            </div>
+
+            <label class="toggle-line">
+              <input id="paintPatchingToggle" type="checkbox" />
+              <span>Rebouchage localisé</span>
+              <strong>6 €/m²</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field" data-target="paintPatchingToggle">
+              <label class="field-label" for="paintPatchingSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintPatchingSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>m²</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>5</span>
+              <h2>Ratissage</h2>
+            </div>
+            <label class="toggle-line paint-relevant-walls">
+              <input id="paintWallSkimToggle" type="checkbox" />
+              <span>Ratissage complet murs</span>
+              <strong>15 €/m²</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field paint-relevant-walls" data-target="paintWallSkimToggle">
+              <label class="field-label" for="paintWallSkimSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintWallSkimSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>m²</span>
+              </div>
+            </div>
+
+            <label class="toggle-line paint-relevant-ceiling">
+              <input id="paintCeilingSkimToggle" type="checkbox" />
+              <span>Ratissage complet plafond</span>
+              <strong>20 €/m²</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field paint-relevant-ceiling" data-target="paintCeilingSkimToggle">
+              <label class="field-label" for="paintCeilingSkimSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintCeilingSkimSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>m²</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>6</span>
+              <h2>Primaire</h2>
+            </div>
+            <label class="toggle-line paint-relevant-walls">
+              <input id="paintWallPrimerToggle" type="checkbox" />
+              <span>Primaire murs</span>
+              <strong>5 €/m²</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field paint-relevant-walls" data-target="paintWallPrimerToggle">
+              <label class="field-label" for="paintWallPrimerSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintWallPrimerSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>m²</span>
+              </div>
+            </div>
+
+            <label class="toggle-line paint-relevant-ceiling">
+              <input id="paintCeilingPrimerToggle" type="checkbox" />
+              <span>Primaire plafond</span>
+              <strong>5 €/m²</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field paint-relevant-ceiling" data-target="paintCeilingPrimerToggle">
+              <label class="field-label" for="paintCeilingPrimerSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintCeilingPrimerSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>m²</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>7</span>
+              <h2>Peinture</h2>
+            </div>
+            <label class="toggle-line paint-relevant-walls">
+              <input id="paintWallPaintToggle" type="checkbox" />
+              <span>Peinture murs - 2 couches</span>
+              <strong>20 €/m²</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field paint-relevant-walls" data-target="paintWallPaintToggle">
+              <label class="field-label" for="paintWallPaintSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintWallPaintSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>m²</span>
+              </div>
+            </div>
+
+            <label class="toggle-line paint-relevant-ceiling">
+              <input id="paintCeilingPaintToggle" type="checkbox" />
+              <span>Peinture plafond - 2 couches</span>
+              <strong>25 €/m²</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field paint-relevant-ceiling" data-target="paintCeilingPaintToggle">
+              <label class="field-label" for="paintCeilingPaintSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintCeilingPaintSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>m²</span>
+              </div>
+            </div>
+
+            <label class="toggle-line paint-relevant-walls">
+              <input id="paintWallPackToggle" type="checkbox" />
+              <span>Pack murs</span>
+              <strong>38 €/m²</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field paint-relevant-walls" data-target="paintWallPackToggle">
+              <label class="field-label" for="paintWallPackSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintWallPackSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>m²</span>
+              </div>
+              <p class="field-help">Comprend ratissage murs, primaire et peinture murs 2 couches.</p>
+            </div>
+
+            <label class="toggle-line paint-relevant-ceiling">
+              <input id="paintCeilingPackToggle" type="checkbox" />
+              <span>Pack plafond</span>
+              <strong>48 €/m²</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field paint-relevant-ceiling" data-target="paintCeilingPackToggle">
+              <label class="field-label" for="paintCeilingPackSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintCeilingPackSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>m²</span>
+              </div>
+              <p class="field-help">Comprend ratissage plafond, primaire et peinture plafond 2 couches.</p>
+            </div>
+          </section>
+
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>8</span>
+              <h2>Fournitures</h2>
+            </div>
+            <div class="choice-grid" role="radiogroup" aria-label="Fournitures peinture">
+              <label class="option-card option-wide">
+                <input type="radio" name="paintSuppliesType" value="client" checked />
+                <span class="option-title">Client fournit les produits</span>
+                <span class="option-price">Montant manuel</span>
+              </label>
+              <label class="option-card option-wide">
+                <input type="radio" name="paintSuppliesType" value="artisan" />
+                <span class="option-title">Je fournis peinture / produits</span>
+                <span class="option-price">Montant manuel</span>
+              </label>
+            </div>
+            <label class="field-label" for="paintSuppliesEstimate">Montant facturé pour les fournitures</label>
+            <div class="input-with-unit compact-unit">
+              <input id="paintSuppliesEstimate" type="number" min="0" step="1" inputmode="decimal" value="0" />
+              <span>€</span>
+            </div>
+          </section>
+
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>9</span>
+              <h2>Frais</h2>
+            </div>
+            <label class="field-label" for="paintTravelCost">Déplacement</label>
+            <div class="input-with-unit compact-unit">
+              <input id="paintTravelCost" type="number" min="0" step="1" inputmode="decimal" value="0" />
+              <span>€</span>
+            </div>
+            <label class="field-label" for="paintOtherCost">Autres frais</label>
+            <div class="input-with-unit compact-unit">
+              <input id="paintOtherCost" type="number" min="0" step="1" inputmode="decimal" value="0" />
+              <span>€</span>
+            </div>
+          </section>
+
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>10</span>
+              <h2>Marge d'imprévu</h2>
+            </div>
+            <div class="choice-grid margin-grid" role="radiogroup" aria-label="Marge d'imprévu peinture">
+              <label class="option-card">
+                <input type="radio" name="paintMarginRate" value="0" />
+                <span class="option-title">Chantier simple</span>
+                <span class="option-price">+0 %</span>
+              </label>
+              <label class="option-card">
+                <input type="radio" name="paintMarginRate" value="0.05" checked />
+                <span class="option-title">Chantier normal</span>
+                <span class="option-price">+5 %</span>
+              </label>
+              <label class="option-card">
+                <input type="radio" name="paintMarginRate" value="0.10" />
+                <span class="option-title">Difficile / incertain</span>
+                <span class="option-price">+10 %</span>
+              </label>
+            </div>
+          </section>
+
+          <div class="form-actions">
+            <button class="btn btn-secondary" id="paintResetButton" type="button">Réinitialiser peinture</button>
+            <button class="btn btn-primary" id="paintCopyEstimateButton" type="button">Copier l'estimation peinture</button>
+          </div>
+          <p class="copy-status" id="paintCopyStatus" role="status" aria-live="polite"></p>
+        </form>
+
+        <aside class="estimator-card result-panel" aria-live="polite">
+          <p class="result-label">Total estimé peinture</p>
+          <output class="total-amount" id="paintTotalAmount">0 €</output>
+          <p class="range-text" id="paintClientRange">Fourchette client : 0 € - 0 €</p>
+
+          <div class="summary-list">
+            <div>
+              <span>Prestations</span>
+              <strong id="paintLaborAmount">0 €</strong>
+            </div>
+            <div>
+              <span>Fournitures</span>
+              <strong id="paintSuppliesAmount">0 €</strong>
+            </div>
+            <div>
+              <span>Déplacement + frais</span>
+              <strong id="paintFeesAmount">0 €</strong>
+            </div>
+            <div>
+              <span>Marge imprévu</span>
+              <strong id="paintMarginAmount">0 €</strong>
+            </div>
+          </div>
+
+          <div class="notice-box" id="paintEstimateWarnings" hidden>
+            <h2>À vérifier</h2>
+            <ul id="paintWarningList"></ul>
+          </div>
+
+          <div class="detail-box">
+            <h2>Détail peinture</h2>
+            <ul id="paintDetailList"></ul>
+          </div>
+        </aside>
+      </div>
+    </section>
 
     <p class="footer-note">
       Page privée d'aide au chiffrage. Le montant reste indicatif et doit être confirmé par visite et devis définitif.

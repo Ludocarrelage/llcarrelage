@@ -2,8 +2,10 @@ const assert = require("assert");
 
 const {
   calculateEstimate,
+  calculatePaintingEstimate,
   calculateProfitability,
   projectRates,
+  paintingRates,
   formatRates,
   supportRates,
   removalRates,
@@ -24,6 +26,32 @@ function estimate(overrides) {
     prepSurfaces: {},
     waterproof: "none",
     waterproofSurface: 0,
+    suppliesEstimate: 0,
+    travelCost: 0,
+    otherCost: 0,
+    marginRate: 0,
+    ...overrides
+  });
+}
+
+function painting(overrides) {
+  return calculatePaintingEstimate({
+    surfaceType: "walls",
+    wallsSurface: 0,
+    ceilingSurface: 0,
+    supportCondition: "good",
+    lessivageMurs: { enabled: false, surface: 0 },
+    sanding: { enabled: false, surface: 0 },
+    patching: { enabled: false, surface: 0 },
+    wallSkim: { enabled: false, surface: 0 },
+    ceilingSkim: { enabled: false, surface: 0 },
+    wallPrimer: { enabled: false, surface: 0 },
+    ceilingPrimer: { enabled: false, surface: 0 },
+    wallPaint: { enabled: false, surface: 0 },
+    ceilingPaint: { enabled: false, surface: 0 },
+    wallPack: { enabled: false, surface: 0 },
+    ceilingPack: { enabled: false, surface: 0 },
+    suppliesType: "client",
     suppliesEstimate: 0,
     travelCost: 0,
     otherCost: 0,
@@ -78,6 +106,18 @@ assert.deepStrictEqual(Object.fromEntries(Object.entries(waterproofRates).map(([
   none: 0,
   spec: 12,
   mat: 18
+});
+assert.deepStrictEqual(Object.fromEntries(Object.entries(paintingRates).map(([key, item]) => [key, item.rate])), {
+  lessivageMurs: 3,
+  poncageLeger: 4,
+  rebouchageLocalise: 6,
+  ratissageMurs: 15,
+  ratissagePlafond: 20,
+  primaire: 5,
+  peintureMurs: 20,
+  peinturePlafond: 25,
+  packMurs: 38,
+  packPlafond: 48
 });
 
 let result = estimate();
@@ -198,5 +238,103 @@ assert.strictEqual(profitability.status, "À compléter");
 
 profitability = calculateProfitability({ totalClient: 900, estimatedHours: "4,5", hourlyTarget: 40 });
 assert.strictEqual(profitability.hourlyYield, 200);
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 40,
+  wallPaint: { enabled: true, surface: 40 }
+});
+assert.strictEqual(result.laborAmount, 800);
+assert.strictEqual(result.total, 800);
+
+result = painting({
+  surfaceType: "ceiling",
+  ceilingSurface: 20,
+  ceilingPaint: { enabled: true, surface: 20 }
+});
+assert.strictEqual(result.laborAmount, 500);
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 50,
+  lessivageMurs: { enabled: true, surface: 50 },
+  sanding: { enabled: true, surface: 20 },
+  patching: { enabled: true, surface: 8 },
+  wallPaint: { enabled: true, surface: 50 }
+});
+assert.strictEqual(result.laborAmount, 1278);
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 40,
+  wallPack: { enabled: true, surface: 40 }
+});
+assert.strictEqual(result.laborAmount, 1520);
+
+result = painting({
+  surfaceType: "ceiling",
+  ceilingSurface: 20,
+  ceilingPack: { enabled: true, surface: 20 }
+});
+assert.strictEqual(result.laborAmount, 960);
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 50,
+  wallPack: { enabled: true, surface: 30 },
+  wallPaint: { enabled: true, surface: 20 }
+});
+assert.strictEqual(result.laborAmount, 1540);
+assert(!result.warningLines.some((line) => line.includes("chevaucher")));
+
+result = painting({
+  surfaceType: "ceiling",
+  ceilingSurface: 20,
+  ceilingPack: { enabled: true, surface: 12 },
+  ceilingPaint: { enabled: true, surface: 8 }
+});
+assert.strictEqual(result.laborAmount, 776);
+assert(!result.warningLines.some((line) => line.includes("chevaucher")));
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 60,
+  patching: { enabled: true, surface: 8 }
+});
+assert.strictEqual(result.laborAmount, 80);
+assert(result.detailLines.some((line) => line.label.includes("8 m² x 6 €/m²")));
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 40,
+  wallPaint: { enabled: true, surface: 40 },
+  suppliesEstimate: 100,
+  travelCost: 20,
+  marginRate: 0.05
+});
+assert.strictEqual(result.laborAmount, 800);
+assert.strictEqual(result.marginAmount, 40);
+assert.strictEqual(result.suppliesAmount, 100);
+assert.strictEqual(result.feesAmount, 20);
+assert.strictEqual(result.total, 960);
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 15,
+  sanding: { enabled: true, surface: 15 },
+  marginRate: 0.05
+});
+assert.strictEqual(result.laborAmount, 80);
+assert.strictEqual(result.marginAmount, 4);
+assert.strictEqual(result.total, 84);
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 40,
+  wallPack: { enabled: true, surface: 30 },
+  wallPaint: { enabled: true, surface: 30 }
+});
+assert(result.warningLines.some((line) => line.includes("chevaucher")));
+assert(Number.isFinite(result.total));
 
 console.log("simulateur tests OK");
