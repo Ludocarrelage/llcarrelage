@@ -174,6 +174,18 @@ p {
   margin: 12px 0 7px;
 }
 
+.section-note,
+.field-help,
+.profit-note {
+  color: var(--muted);
+  font-size: 0.9rem;
+  margin: -2px 0 12px;
+}
+
+.field-help {
+  margin: 7px 0 0;
+}
+
 select,
 input[type="number"] {
   appearance: none;
@@ -227,6 +239,10 @@ input[type="number"]:focus {
   min-height: 54px;
   padding: 0 13px;
   white-space: nowrap;
+}
+
+.compact-unit {
+  grid-template-columns: minmax(0, 1fr) minmax(48px, auto);
 }
 
 .choice-grid {
@@ -311,6 +327,49 @@ input[type="number"]:focus {
 
 .expandable-field.is-visible {
   display: block;
+}
+
+.option-surface-field {
+  background: rgba(239, 104, 30, 0.07);
+  border: 1px solid rgba(239, 104, 30, 0.16);
+  border-radius: 16px;
+  display: none;
+  margin-top: 10px;
+  padding: 12px;
+}
+
+.option-surface-field.is-visible {
+  display: block;
+}
+
+.option-surface-field .field-label {
+  margin-top: 0;
+}
+
+.profit-quick-grid,
+.profit-cost-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.profit-costs {
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(38, 54, 59, 0.12);
+  border-radius: 16px;
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.profit-costs summary {
+  color: var(--dark);
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 44px;
+  padding-top: 10px;
+}
+
+.profit-costs[open] summary {
+  margin-bottom: 8px;
 }
 
 .form-actions {
@@ -424,9 +483,38 @@ input[type="number"]:focus {
   padding: 14px;
 }
 
-.detail-box h2 {
+.detail-box h2,
+.notice-box h2,
+.profit-box h2 {
   color: #fff;
   margin-bottom: 10px;
+}
+
+.notice-box {
+  background: #fff7ef;
+  border: 1px solid rgba(239, 104, 30, 0.28);
+  border-radius: 18px;
+  color: var(--dark);
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.notice-box h2 {
+  color: var(--dark);
+  font-size: 1rem;
+}
+
+.notice-box ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.notice-box li {
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 800;
 }
 
 .detail-box ul {
@@ -438,9 +526,11 @@ input[type="number"]:focus {
 }
 
 .detail-box li {
+  align-items: flex-start;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.82);
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   justify-content: space-between;
   padding-bottom: 8px;
@@ -454,6 +544,92 @@ input[type="number"]:focus {
 .detail-box strong {
   color: #fff;
   white-space: nowrap;
+}
+
+.detail-box span {
+  min-width: 0;
+}
+
+.profit-box {
+  background: rgba(255, 250, 244, 0.92);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  margin-top: 14px;
+  padding: 14px;
+}
+
+.profit-box h2 {
+  color: var(--dark);
+  font-size: 1rem;
+}
+
+.profit-status {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 0.82rem;
+  font-weight: 900;
+  margin-bottom: 10px;
+  padding: 7px 10px;
+}
+
+.profit-status[data-status="empty"] {
+  background: rgba(117, 107, 95, 0.12);
+  color: var(--muted);
+}
+
+.profit-status[data-status="low"] {
+  background: rgba(185, 28, 28, 0.12);
+  color: #991b1b;
+}
+
+.profit-status[data-status="fair"] {
+  background: rgba(202, 138, 4, 0.13);
+  color: #8a5d00;
+}
+
+.profit-status[data-status="good"] {
+  background: rgba(22, 101, 52, 0.12);
+  color: #166534;
+}
+
+.profit-status[data-status="strong"] {
+  background: rgba(21, 128, 61, 0.16);
+  color: #0f6b36;
+}
+
+.profit-results {
+  display: grid;
+  gap: 8px;
+}
+
+.profit-results div {
+  align-items: center;
+  background: #fff;
+  border: 1px solid rgba(38, 54, 59, 0.11);
+  border-radius: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  min-height: 46px;
+  padding: 10px 12px;
+}
+
+.profit-results span {
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.profit-results strong {
+  color: var(--dark);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.profit-box .profit-note {
+  margin: 10px 0 0;
 }
 
 .footer-note,
@@ -473,7 +649,9 @@ input[type="number"]:focus {
 
   .choice-grid,
   .margin-grid,
-  .form-actions {
+  .form-actions,
+  .profit-quick-grid,
+  .profit-cost-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

@@ -2,6 +2,8 @@
   "use strict";
 
   const MINIMUM_INTERVENTION = 80;
+  const DEFAULT_HOURLY_TARGET = 40;
+  const HOURLY_TARGET_STORAGE_KEY = "llcarrelage_hourly_target";
 
   const projectRates = {
     interior: {
@@ -128,14 +130,24 @@
     allSupplies: "Je fournis tout"
   };
 
+  const defaultPrepSurfaces = {
+    lightLeveling: 0,
+    heavyLeveling: 0,
+    sanding: 0,
+    primer: 0
+  };
+
   const defaultState = {
     projectType: "interior",
     quantity: 0,
     tileFormat: "none",
     supports: ["standard"],
     removal: "none",
+    removalSurface: 0,
     prep: ["none"],
+    prepSurfaces: { ...defaultPrepSurfaces },
     waterproof: "none",
+    waterproofSurface: 0,
     extraBaseboardsEnabled: false,
     extraBaseboardsLength: 0,
     siliconeEnabled: false,
@@ -147,7 +159,13 @@
     suppliesEstimate: 0,
     travelCost: 0,
     otherCost: 0,
-    marginRate: 0.05
+    marginRate: 0.05,
+    realSuppliesCost: 0,
+    realTravelCost: 0,
+    wasteCost: 0,
+    otherRealCost: 0,
+    estimatedHours: 0,
+    hourlyTarget: DEFAULT_HOURLY_TARGET
   };
 
   function numberValue(value) {
@@ -165,12 +183,34 @@
     return Math.round(value);
   }
 
+  function roundDisplayEuro(value) {
+    if (!Number.isFinite(value)) {
+      return 0;
+    }
+    return Math.round(value);
+  }
+
   function formatCurrency(value) {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
       currency: "EUR",
       maximumFractionDigits: 0
     }).format(roundEuro(value));
+  }
+
+  function formatInternalCurrency(value, showPlus) {
+    const rounded = roundDisplayEuro(value);
+    const formatted = new Intl.NumberFormat("fr-FR", {
+      style: "currency",
+      currency: "EUR",
+      maximumFractionDigits: 0
+    }).format(rounded);
+
+    if (showPlus && rounded > 0) {
+      return `+${formatted}`;
+    }
+
+    return formatted;
   }
 
   function formatQuantity(value) {
@@ -180,11 +220,43 @@
     }).format(rounded);
   }
 
+  function formatInputValue(value) {
+    const safeValue = numberValue(value);
+    if (Number.isInteger(safeValue)) {
+      return String(safeValue);
+    }
+    return String(Math.round(safeValue * 10) / 10);
+  }
+
+  function normalizeList(values, allowedKeys, fallback) {
+    const keys = Array.isArray(values) ? values : [fallback];
+    const filtered = keys.filter((key) => allowedKeys.includes(key));
+    return filtered.length ? filtered : [fallback];
+  }
+
   function normalizeState(state) {
     const merged = { ...defaultState, ...(state || {}) };
+    const prepSurfaces = {
+      ...defaultPrepSurfaces,
+      ...(state && typeof state.prepSurfaces === "object" ? state.prepSurfaces : {})
+    };
+
     merged.quantity = numberValue(merged.quantity);
-    merged.supports = Array.isArray(merged.supports) ? merged.supports : ["standard"];
-    merged.prep = Array.isArray(merged.prep) ? merged.prep : ["none"];
+    merged.supports = normalizeList(merged.supports, Object.keys(supportRates), "standard");
+    if (merged.supports.some((support) => support !== "standard")) {
+      merged.supports = merged.supports.filter((support) => support !== "standard");
+    }
+
+    merged.prep = normalizeList(merged.prep, Object.keys(prepRates), "none");
+    if (merged.prep.some((prepKey) => prepKey !== "none")) {
+      merged.prep = merged.prep.filter((prepKey) => prepKey !== "none");
+    }
+
+    merged.removalSurface = numberValue(merged.removalSurface);
+    merged.prepSurfaces = Object.fromEntries(
+      Object.keys(defaultPrepSurfaces).map((key) => [key, numberValue(prepSurfaces[key])])
+    );
+    merged.waterproofSurface = numberValue(merged.waterproofSurface);
     merged.extraBaseboardsLength = numberValue(merged.extraBaseboardsLength);
     merged.siliconeLength = numberValue(merged.siliconeLength);
     merged.profileLength = numberValue(merged.profileLength);
@@ -193,6 +265,12 @@
     merged.travelCost = numberValue(merged.travelCost);
     merged.otherCost = numberValue(merged.otherCost);
     merged.marginRate = numberValue(merged.marginRate);
+    merged.realSuppliesCost = numberValue(merged.realSuppliesCost);
+    merged.realTravelCost = numberValue(merged.realTravelCost);
+    merged.wasteCost = numberValue(merged.wasteCost);
+    merged.otherRealCost = numberValue(merged.otherRealCost);
+    merged.estimatedHours = numberValue(merged.estimatedHours);
+    merged.hourlyTarget = numberValue(merged.hourlyTarget) || DEFAULT_HOURLY_TARGET;
     return merged;
   }
 
@@ -207,6 +285,26 @@
     }
   }
 
+  function addWarning(warnings, message) {
+    if (!warnings.includes(message)) {
+      warnings.push(message);
+    }
+  }
+
+  function warnIfSurfaceAboveMain(warnings, label, surface, mainQuantity) {
+    if (mainQuantity > 0 && surface > mainQuantity) {
+      addWarning(warnings, `${label} : surface supérieure à la surface principale, vérifier la saisie.`);
+    }
+  }
+
+  function buildSurfaceLine(label, surface, rate) {
+    if (surface <= 0) {
+      return `${label} - surface à renseigner`;
+    }
+
+    return `${label} - ${formatQuantity(surface)} m² x ${rate} €/m²`;
+  }
+
   function calculateEstimate(inputState) {
     const state = normalizeState(inputState);
     const project = projectRates[state.projectType] || projectRates.interior;
@@ -215,6 +313,7 @@
     const unit = project.unitLabel;
     const quantity = isBrokenTiles ? Math.floor(state.quantity) : state.quantity;
     const lines = [];
+    const warnings = [];
 
     let laborSubtotal = 0;
     let baseAmount = 0;
@@ -235,8 +334,9 @@
       }
     } else if (isClassic) {
       const format = formatRates[state.tileFormat] || formatRates.none;
-      addLine(lines, `${format.label} - ${format.rate} €/${unit}`, lineAmount(quantity, format.rate), false);
-      laborSubtotal += lineAmount(quantity, format.rate);
+      const formatAmount = lineAmount(quantity, format.rate);
+      addLine(lines, `${format.label} - ${formatQuantity(quantity)} ${unit} x ${format.rate} €/${unit}`, formatAmount, false);
+      laborSubtotal += formatAmount;
 
       state.supports.forEach((supportKey) => {
         if (supportKey === "standard") return;
@@ -244,27 +344,63 @@
         if (!support) return;
         const amount = lineAmount(quantity, support.rate);
         laborSubtotal += amount;
-        addLine(lines, `${support.label} - ${support.rate} €/${unit}`, amount, false);
+        addLine(lines, `${support.label} - ${formatQuantity(quantity)} ${unit} x ${support.rate} €/${unit}`, amount, false);
       });
 
       const removal = removalRates[state.removal] || removalRates.none;
-      const removalAmount = lineAmount(quantity, removal.rate);
-      laborSubtotal += removalAmount;
-      addLine(lines, `${removal.label} - ${removal.rate} €/${unit}`, removalAmount, false);
+      if (state.removal !== "none") {
+        const removalAmount = lineAmount(state.removalSurface, removal.rate);
+        laborSubtotal += removalAmount;
+        addLine(lines, buildSurfaceLine(removal.label, state.removalSurface, removal.rate), removalAmount, true);
+        warnIfSurfaceAboveMain(warnings, removal.label, state.removalSurface, quantity);
+
+        if (state.removalSurface <= 0) {
+          addWarning(warnings, "Dépose : renseigner la surface concernée.");
+        }
+      }
 
       state.prep.forEach((prepKey) => {
         if (prepKey === "none") return;
         const prep = prepRates[prepKey];
         if (!prep) return;
-        const amount = lineAmount(quantity, prep.rate);
+        const prepSurface = state.prepSurfaces[prepKey] || 0;
+        const amount = lineAmount(prepSurface, prep.rate);
         laborSubtotal += amount;
-        addLine(lines, `${prep.label} - ${prep.rate} €/${unit}`, amount, false);
+        addLine(lines, buildSurfaceLine(prep.label, prepSurface, prep.rate), amount, true);
+        warnIfSurfaceAboveMain(warnings, prep.label, prepSurface, quantity);
+
+        if (prepSurface <= 0) {
+          addWarning(warnings, `${prep.label} : renseigner la surface concernée.`);
+        }
       });
 
       const waterproof = waterproofRates[state.waterproof] || waterproofRates.none;
-      const waterproofAmount = lineAmount(quantity, waterproof.rate);
-      laborSubtotal += waterproofAmount;
-      addLine(lines, `${waterproof.label} - ${waterproof.rate} €/${unit}`, waterproofAmount, false);
+      if (state.waterproof !== "none") {
+        const waterproofAmount = lineAmount(state.waterproofSurface, waterproof.rate);
+        laborSubtotal += waterproofAmount;
+        addLine(lines, buildSurfaceLine(waterproof.label, state.waterproofSurface, waterproof.rate), waterproofAmount, true);
+        warnIfSurfaceAboveMain(warnings, waterproof.label, state.waterproofSurface, quantity);
+
+        if (state.waterproofSurface <= 0) {
+          addWarning(warnings, "Étanchéité : renseigner la surface concernée.");
+        }
+      }
+
+      if (state.supports.includes("oldTiles") && state.removal !== "none") {
+        addWarning(warnings, "Ancien carrelage + dépose : vérifier que ces deux suppléments ne couvrent pas le même travail.");
+      }
+
+      if (state.supports.includes("oldTiles") && (state.prep.includes("sanding") || state.prep.includes("primer"))) {
+        addWarning(warnings, "Ancien carrelage + préparation : vérifier que ces deux suppléments ne couvrent pas le même travail.");
+      }
+
+      if (state.supports.includes("notFlat") && (state.prep.includes("lightLeveling") || state.prep.includes("heavyLeveling"))) {
+        addWarning(warnings, "Support pas plat + ragréage : vérifier que ces deux suppléments ne couvrent pas le même travail.");
+      }
+
+      if (state.supports.includes("wood") && state.waterproof === "mat") {
+        addWarning(warnings, "Support bois + natte : vérifier que ces deux suppléments ne couvrent pas le même travail.");
+      }
     }
 
     if (project.kind !== "baseboards" && project.kind !== "brokenTiles" && project.kind !== "grout") {
@@ -323,14 +459,81 @@
       total: roundedTotal,
       low: roundEuro(roundedTotal * 0.95),
       high: roundEuro(roundedTotal * 1.1),
-      detailLines: lines
+      detailLines: lines,
+      warningLines: warnings
+    };
+  }
+
+  function calculateProfitability(input) {
+    const data = {
+      totalClient: numberValue(input && input.totalClient),
+      realSuppliesCost: numberValue(input && input.realSuppliesCost),
+      realTravelCost: numberValue(input && input.realTravelCost),
+      wasteCost: numberValue(input && input.wasteCost),
+      otherRealCost: numberValue(input && input.otherRealCost),
+      estimatedHours: numberValue(input && input.estimatedHours),
+      hourlyTarget: numberValue(input && input.hourlyTarget) || DEFAULT_HOURLY_TARGET
+    };
+
+    const directCosts = data.realSuppliesCost + data.realTravelCost + data.wasteCost + data.otherRealCost;
+    const remainingAfterCosts = data.totalClient - directCosts;
+    const hasHours = data.estimatedHours > 0;
+    const hourlyYield = hasHours ? remainingAfterCosts / data.estimatedHours : null;
+    const targetLabor = hasHours ? data.estimatedHours * data.hourlyTarget : null;
+    const minimumObjectivePrice = hasHours ? targetLabor + directCosts : null;
+    const objectiveGap = hasHours ? data.totalClient - minimumObjectivePrice : null;
+
+    let status = "À compléter";
+    let statusKey = "empty";
+    let message = "Renseignez le temps estimé pour calculer la rentabilité.";
+
+    if (hasHours) {
+      if (hourlyYield < 30) {
+        status = "Peu rentable";
+        statusKey = "low";
+      } else if (hourlyYield < 40) {
+        status = "Correct";
+        statusKey = "fair";
+      } else if (hourlyYield < 50) {
+        status = "Rentable";
+        statusKey = "good";
+      } else {
+        status = "Très rentable";
+        statusKey = "strong";
+      }
+
+      if (objectiveGap < 0) {
+        message = `Il manque environ ${formatInternalCurrency(Math.abs(objectiveGap))} pour atteindre l'objectif.`;
+      } else {
+        message = `Prix supérieur d'environ ${formatInternalCurrency(objectiveGap)} à l'objectif.`;
+      }
+    }
+
+    return {
+      directCosts,
+      remainingAfterCosts,
+      hourlyYield,
+      hourlyTarget: data.hourlyTarget,
+      targetLabor,
+      minimumObjectivePrice,
+      objectiveGap,
+      status,
+      statusKey,
+      message
     };
   }
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
       calculateEstimate,
-      projectRates
+      calculateProfitability,
+      projectRates,
+      formatRates,
+      supportRates,
+      removalRates,
+      prepRates,
+      waterproofRates,
+      MINIMUM_INTERVENTION
     };
   }
 
@@ -344,7 +547,19 @@
   const quantityInput = document.getElementById("quantityInput");
   const quantityUnit = document.getElementById("quantityUnit");
   const detailList = document.getElementById("detailList");
+  const warningBox = document.getElementById("estimateWarnings");
+  const warningList = document.getElementById("warningList");
   const copyStatus = document.getElementById("copyStatus");
+
+  const surfaceInputs = {
+    removalSurface: document.getElementById("removalSurface"),
+    prepLightSurface: document.getElementById("prepLightSurface"),
+    prepHeavySurface: document.getElementById("prepHeavySurface"),
+    prepSandingSurface: document.getElementById("prepSandingSurface"),
+    prepPrimerSurface: document.getElementById("prepPrimerSurface"),
+    waterproofSurface: document.getElementById("waterproofSurface")
+  };
+
   let lastCalculation = calculateEstimate(defaultState);
 
   function getCheckedRadio(name) {
@@ -376,8 +591,16 @@
       tileFormat: getCheckedRadio("tileFormat") || "none",
       supports: getCheckedValues(["supportStandard", "supportOldTiles", "supportWood", "supportUnknown", "supportNotFlat"]),
       removal: getCheckedRadio("removal") || "none",
+      removalSurface: getInputNumber("removalSurface"),
       prep: getCheckedValues(["prepNone", "prepLight", "prepHeavy", "prepSanding", "prepPrimer"]),
+      prepSurfaces: {
+        lightLeveling: getInputNumber("prepLightSurface"),
+        heavyLeveling: getInputNumber("prepHeavySurface"),
+        sanding: getInputNumber("prepSandingSurface"),
+        primer: getInputNumber("prepPrimerSurface")
+      },
       waterproof: getCheckedRadio("waterproof") || "none",
+      waterproofSurface: getInputNumber("waterproofSurface"),
       extraBaseboardsEnabled: isChecked("extraBaseboardsToggle"),
       extraBaseboardsLength: getInputNumber("extraBaseboardsLength"),
       siliconeEnabled: isChecked("siliconeToggle"),
@@ -389,7 +612,13 @@
       suppliesEstimate: getInputNumber("suppliesEstimate"),
       travelCost: getInputNumber("travelCost"),
       otherCost: getInputNumber("otherCost"),
-      marginRate: numberValue(getCheckedRadio("marginRate") || 0)
+      marginRate: numberValue(getCheckedRadio("marginRate") || 0),
+      realSuppliesCost: getInputNumber("realSuppliesCost"),
+      realTravelCost: getInputNumber("realTravelCost"),
+      wasteCost: getInputNumber("wasteCost"),
+      otherRealCost: getInputNumber("otherRealCost"),
+      estimatedHours: getInputNumber("estimatedHours"),
+      hourlyTarget: getInputNumber("hourlyTarget") || DEFAULT_HOURLY_TARGET
     };
   }
 
@@ -415,15 +644,67 @@
     });
   }
 
+  function renderWarnings(warnings) {
+    if (!warningBox || !warningList) return;
+
+    warningList.innerHTML = "";
+    warningBox.hidden = warnings.length === 0;
+
+    warnings.forEach((warning) => {
+      const item = document.createElement("li");
+      item.textContent = warning;
+      warningList.appendChild(item);
+    });
+  }
+
+  function renderProfitability(profitability) {
+    const status = document.getElementById("profitabilityStatus");
+
+    if (status) {
+      status.textContent = profitability.status;
+      status.dataset.status = profitability.statusKey;
+    }
+
+    setText("directCostsAmount", formatCurrency(profitability.directCosts));
+    setText("remainingAfterCosts", formatInternalCurrency(profitability.remainingAfterCosts));
+    setText(
+      "hourlyYield",
+      profitability.hourlyYield === null ? "À renseigner" : `${formatInternalCurrency(profitability.hourlyYield)}/h`
+    );
+    setText("profitTarget", `${formatQuantity(profitability.hourlyTarget)} €/h`);
+    setText(
+      "minimumObjectivePrice",
+      profitability.minimumObjectivePrice === null ? "À renseigner" : formatInternalCurrency(profitability.minimumObjectivePrice)
+    );
+    setText(
+      "objectiveGap",
+      profitability.objectiveGap === null ? "À renseigner" : formatInternalCurrency(profitability.objectiveGap, true)
+    );
+    setText("profitHint", profitability.message);
+  }
+
   function updateEstimate() {
-    lastCalculation = calculateEstimate(readState());
+    const state = readState();
+    lastCalculation = calculateEstimate(state);
+    const profitability = calculateProfitability({
+      totalClient: lastCalculation.total,
+      realSuppliesCost: state.realSuppliesCost,
+      realTravelCost: state.realTravelCost,
+      wasteCost: state.wasteCost,
+      otherRealCost: state.otherRealCost,
+      estimatedHours: state.estimatedHours,
+      hourlyTarget: state.hourlyTarget
+    });
+
     setText("totalAmount", formatCurrency(lastCalculation.total));
     setText("clientRange", `Fourchette client : ${formatCurrency(lastCalculation.low)} - ${formatCurrency(lastCalculation.high)}`);
     setText("laborAmount", formatCurrency(lastCalculation.laborAmount));
     setText("suppliesAmount", formatCurrency(lastCalculation.suppliesAmount));
     setText("feesAmount", formatCurrency(lastCalculation.feesAmount));
     setText("marginAmount", formatCurrency(lastCalculation.marginAmount));
+    renderWarnings(lastCalculation.warningLines);
     renderDetails(lastCalculation.detailLines);
+    renderProfitability(profitability);
   }
 
   function updateQuantityLabels() {
@@ -447,6 +728,8 @@
     if (extraBaseboardsSection) {
       extraBaseboardsSection.classList.toggle("is-hidden", !showExtraBaseboards);
     }
+
+    syncSpecificSurfaceFields();
   }
 
   function syncExpandableFields() {
@@ -454,6 +737,35 @@
       const toggle = document.getElementById(field.dataset.target);
       field.classList.toggle("is-visible", Boolean(toggle && toggle.checked));
     });
+  }
+
+  function syncSpecificSurfaceFields() {
+    const project = projectRates[projectSelect.value] || projectRates.interior;
+    const isClassic = project.kind === "classic";
+    const visibleState = {
+      removal: isClassic && getCheckedRadio("removal") !== "none",
+      prepLight: isClassic && isChecked("prepLight"),
+      prepHeavy: isClassic && isChecked("prepHeavy"),
+      prepSanding: isClassic && isChecked("prepSanding"),
+      prepPrimer: isClassic && isChecked("prepPrimer"),
+      waterproof: isClassic && getCheckedRadio("waterproof") !== "none"
+    };
+
+    document.querySelectorAll(".option-surface-field[data-surface-for]").forEach((field) => {
+      field.classList.toggle("is-visible", Boolean(visibleState[field.dataset.surfaceFor]));
+    });
+  }
+
+  function prefillSpecificSurface(inputId) {
+    const input = surfaceInputs[inputId];
+    if (!input) return;
+
+    const currentValue = numberValue(input.value);
+    const mainQuantity = numberValue(quantityInput.value);
+
+    if (currentValue <= 0 && mainQuantity > 0) {
+      input.value = formatInputValue(mainQuantity);
+    }
   }
 
   function normalizeSupportSelection(changedInput) {
@@ -523,11 +835,69 @@
     }
   }
 
+  function handleSpecificSurfaceActivation(target) {
+    if (!target) return;
+
+    if (target.name === "removal" && target.value !== "none" && target.checked) {
+      prefillSpecificSurface("removalSurface");
+    }
+
+    if (target.id === "prepLight" && target.checked) {
+      prefillSpecificSurface("prepLightSurface");
+    }
+
+    if (target.id === "prepHeavy" && target.checked) {
+      prefillSpecificSurface("prepHeavySurface");
+    }
+
+    if (target.id === "prepSanding" && target.checked) {
+      prefillSpecificSurface("prepSandingSurface");
+    }
+
+    if (target.id === "prepPrimer" && target.checked) {
+      prefillSpecificSurface("prepPrimerSurface");
+    }
+
+    if (target.name === "waterproof" && target.value !== "none" && target.checked) {
+      prefillSpecificSurface("waterproofSurface");
+    }
+  }
+
+  function saveHourlyTarget() {
+    const target = document.getElementById("hourlyTarget");
+    if (!target || !window.localStorage) return;
+
+    try {
+      const value = numberValue(target.value);
+      if (value > 0) {
+        window.localStorage.setItem(HOURLY_TARGET_STORAGE_KEY, String(value));
+      }
+    } catch (error) {
+      // Le simulateur doit rester utilisable si le navigateur bloque le stockage local.
+    }
+  }
+
+  function applyStoredHourlyTarget() {
+    const target = document.getElementById("hourlyTarget");
+    if (!target || !window.localStorage) return;
+
+    try {
+      const storedValue = numberValue(window.localStorage.getItem(HOURLY_TARGET_STORAGE_KEY));
+      if (storedValue > 0) {
+        target.value = formatInputValue(storedValue);
+      }
+    } catch (error) {
+      target.value = String(DEFAULT_HOURLY_TARGET);
+    }
+  }
+
   function resetEstimator() {
     form.reset();
+    applyStoredHourlyTarget();
     updateQuantityLabels();
     toggleSections();
     syncExpandableFields();
+    syncSpecificSurfaceFields();
     updateEstimate();
     copyStatus.textContent = "";
   }
@@ -580,12 +950,21 @@
   }
 
   function initEstimator() {
+    applyStoredHourlyTarget();
     updateQuantityLabels();
     toggleSections();
     syncExpandableFields();
+    syncSpecificSurfaceFields();
     updateEstimate();
 
-    form.addEventListener("input", updateEstimate);
+    form.addEventListener("input", (event) => {
+      if (event.target && event.target.id === "hourlyTarget") {
+        saveHourlyTarget();
+      }
+
+      updateEstimate();
+    });
+
     form.addEventListener("change", (event) => {
       const target = event.target;
 
@@ -602,7 +981,9 @@
         normalizePrepSelection(target);
       }
 
+      handleSpecificSurfaceActivation(target);
       syncExpandableFields();
+      syncSpecificSurfaceFields();
       updateEstimate();
     });
 
@@ -617,6 +998,7 @@
 
   window.LLJobEstimator = {
     calculateEstimate,
+    calculateProfitability,
     readState,
     updateEstimate
   };

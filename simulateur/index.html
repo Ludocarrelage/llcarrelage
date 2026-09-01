@@ -54,7 +54,7 @@
           </div>
           <label class="field-label" id="quantityLabel" for="quantityInput">Surface en m²</label>
           <div class="input-with-unit">
-            <input id="quantityInput" name="quantity" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0" />
+            <input id="quantityInput" name="quantity" type="number" min="0" step="0.1" inputmode="decimal" value="0" placeholder="0" />
             <span id="quantityUnit">m²</span>
           </div>
         </section>
@@ -93,6 +93,7 @@
             <span>4</span>
             <h2>Support</h2>
           </div>
+          <p class="section-note">Le support décrit la base existante. Les travaux de préparation sont ajoutés séparément.</p>
           <div class="choice-grid">
             <label class="option-card">
               <input id="supportStandard" type="checkbox" value="standard" checked />
@@ -149,6 +150,14 @@
               <span class="option-price">+7 €/m²</span>
             </label>
           </div>
+          <div class="option-surface-field" data-surface-for="removal">
+            <label class="field-label" for="removalSurface">Surface à déposer</label>
+            <div class="input-with-unit compact-unit">
+              <input id="removalSurface" name="removalSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" placeholder="0" />
+              <span>m²</span>
+            </div>
+            <p class="field-help">À modifier seulement si une partie du chantier est concernée.</p>
+          </div>
         </section>
 
         <section class="estimator-section conditional-section" data-section="prep">
@@ -167,21 +176,49 @@
               <span class="option-title">Ragréage léger</span>
               <span class="option-price">+8 €/m²</span>
             </label>
+            <div class="option-surface-field option-wide" data-surface-for="prepLight">
+              <label class="field-label" for="prepLightSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="prepLightSurface" name="prepLightSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" placeholder="0" />
+                <span>m²</span>
+              </div>
+            </div>
             <label class="option-card">
               <input id="prepHeavy" type="checkbox" value="heavyLeveling" />
               <span class="option-title">Ragréage important</span>
               <span class="option-price">+15 €/m²</span>
             </label>
+            <div class="option-surface-field option-wide" data-surface-for="prepHeavy">
+              <label class="field-label" for="prepHeavySurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="prepHeavySurface" name="prepHeavySurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" placeholder="0" />
+                <span>m²</span>
+              </div>
+            </div>
             <label class="option-card">
               <input id="prepSanding" type="checkbox" value="sanding" />
               <span class="option-title">Ponçage / nettoyage</span>
               <span class="option-price">+5 €/m²</span>
             </label>
+            <div class="option-surface-field option-wide" data-surface-for="prepSanding">
+              <label class="field-label" for="prepSandingSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="prepSandingSurface" name="prepSandingSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" placeholder="0" />
+                <span>m²</span>
+              </div>
+            </div>
             <label class="option-card option-wide">
               <input id="prepPrimer" type="checkbox" value="primer" />
               <span class="option-title">Primaire d'accrochage</span>
               <span class="option-price">+3 €/m²</span>
             </label>
+            <div class="option-surface-field option-wide" data-surface-for="prepPrimer">
+              <label class="field-label" for="prepPrimerSurface">Surface concernée</label>
+              <div class="input-with-unit compact-unit">
+                <input id="prepPrimerSurface" name="prepPrimerSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" placeholder="0" />
+                <span>m²</span>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -207,6 +244,14 @@
               <span class="option-price">+18 €/m²</span>
             </label>
           </div>
+          <div class="option-surface-field" data-surface-for="waterproof">
+            <label class="field-label" for="waterproofSurface">Surface étanchéité</label>
+            <div class="input-with-unit compact-unit">
+              <input id="waterproofSurface" name="waterproofSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" placeholder="0" />
+              <span>m²</span>
+            </div>
+            <p class="field-help">Indique uniquement la zone à protéger.</p>
+          </div>
         </section>
 
         <section class="estimator-section conditional-section" data-section="extraBaseboards">
@@ -222,7 +267,7 @@
           <div class="expandable-field" data-target="extraBaseboardsToggle">
             <label class="field-label" for="extraBaseboardsLength">Longueur de plinthes</label>
             <div class="input-with-unit">
-              <input id="extraBaseboardsLength" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0" />
+              <input id="extraBaseboardsLength" type="number" min="0" step="0.1" inputmode="decimal" value="0" placeholder="0" />
               <span>ml</span>
             </div>
           </div>
@@ -241,7 +286,7 @@
           <div class="expandable-field" data-target="siliconeToggle">
             <label class="field-label" for="siliconeLength">Longueur silicone</label>
             <div class="input-with-unit">
-              <input id="siliconeLength" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0" />
+              <input id="siliconeLength" type="number" min="0" step="0.1" inputmode="decimal" value="0" placeholder="0" />
               <span>ml</span>
             </div>
           </div>
@@ -254,14 +299,14 @@
           <div class="expandable-field" data-target="profileToggle">
             <label class="field-label" for="profileLength">Longueur profilés</label>
             <div class="input-with-unit">
-              <input id="profileLength" type="number" min="0" step="0.1" inputmode="decimal" placeholder="0" />
+              <input id="profileLength" type="number" min="0" step="0.1" inputmode="decimal" value="0" placeholder="0" />
               <span>ml</span>
             </div>
           </div>
 
           <label class="field-label" for="thresholdCount">Nombre de seuils / petites finitions</label>
           <div class="input-with-unit">
-            <input id="thresholdCount" type="number" min="0" step="1" inputmode="numeric" placeholder="0" />
+            <input id="thresholdCount" type="number" min="0" step="1" inputmode="numeric" value="0" placeholder="0" />
             <span>x 25 €</span>
           </div>
         </section>
@@ -277,7 +322,7 @@
             <option value="glueAndGrout">Je fournis colle + joints</option>
             <option value="allSupplies">Je fournis tout</option>
           </select>
-          <label class="field-label" for="suppliesEstimate">Fournitures estimées</label>
+          <label class="field-label" for="suppliesEstimate">Montant facturé au client pour les fournitures</label>
           <div class="input-with-unit">
             <input id="suppliesEstimate" type="number" min="0" step="1" inputmode="decimal" value="0" />
             <span>€</span>
@@ -325,6 +370,63 @@
           </div>
         </section>
 
+        <section class="estimator-section internal-section">
+          <div class="section-heading">
+            <span>13</span>
+            <h2>Coûts réels / rentabilité</h2>
+          </div>
+          <p class="section-note">Ces informations restent internes et ne changent pas le devis client.</p>
+          <div class="profit-quick-grid">
+            <div>
+              <label class="field-label" for="estimatedHours">Temps de travail estimé</label>
+              <div class="input-with-unit compact-unit">
+                <input id="estimatedHours" type="number" min="0" step="0.5" inputmode="decimal" value="0" />
+                <span>h</span>
+              </div>
+            </div>
+            <div>
+              <label class="field-label" for="hourlyTarget">Objectif de rentabilité</label>
+              <div class="input-with-unit compact-unit">
+                <input id="hourlyTarget" type="number" min="0" step="1" inputmode="decimal" value="40" />
+                <span>€/h</span>
+              </div>
+            </div>
+          </div>
+          <details class="profit-costs">
+            <summary>Afficher les coûts détaillés</summary>
+            <div class="profit-cost-grid">
+              <div>
+                <label class="field-label" for="realSuppliesCost">Coût réel des fournitures</label>
+                <div class="input-with-unit compact-unit">
+                  <input id="realSuppliesCost" type="number" min="0" step="1" inputmode="decimal" value="0" />
+                  <span>€</span>
+                </div>
+              </div>
+              <div>
+                <label class="field-label" for="realTravelCost">Carburant / péage / déplacement réel</label>
+                <div class="input-with-unit compact-unit">
+                  <input id="realTravelCost" type="number" min="0" step="1" inputmode="decimal" value="0" />
+                  <span>€</span>
+                </div>
+              </div>
+              <div>
+                <label class="field-label" for="wasteCost">Déchetterie / évacuation</label>
+                <div class="input-with-unit compact-unit">
+                  <input id="wasteCost" type="number" min="0" step="1" inputmode="decimal" value="0" />
+                  <span>€</span>
+                </div>
+              </div>
+              <div>
+                <label class="field-label" for="otherRealCost">Autres coûts réels</label>
+                <div class="input-with-unit compact-unit">
+                  <input id="otherRealCost" type="number" min="0" step="1" inputmode="decimal" value="0" />
+                  <span>€</span>
+                </div>
+              </div>
+            </div>
+          </details>
+        </section>
+
         <div class="form-actions">
           <button class="btn btn-secondary" id="resetButton" type="button">Réinitialiser</button>
           <button class="btn btn-primary" id="copyEstimateButton" type="button">Copier l'estimation</button>
@@ -357,9 +459,47 @@
           </div>
         </div>
 
+        <div class="notice-box" id="estimateWarnings" hidden>
+          <h2>À vérifier</h2>
+          <ul id="warningList"></ul>
+        </div>
+
         <div class="detail-box">
           <h2>Détail rapide</h2>
           <ul id="detailList"></ul>
+        </div>
+
+        <div class="profit-box">
+          <h2>Rentabilité estimée</h2>
+          <p class="profit-status" id="profitabilityStatus">À compléter</p>
+          <div class="profit-results">
+            <div>
+              <span>Coûts réels directs</span>
+              <strong id="directCostsAmount">0 €</strong>
+            </div>
+            <div>
+              <span>Reste après coûts directs</span>
+              <strong id="remainingAfterCosts">0 €</strong>
+            </div>
+            <div>
+              <span>Rendement estimé</span>
+              <strong id="hourlyYield">À renseigner</strong>
+            </div>
+            <div>
+              <span>Objectif</span>
+              <strong id="profitTarget">40 €/h</strong>
+            </div>
+            <div>
+              <span>Prix minimum objectif</span>
+              <strong id="minimumObjectivePrice">À renseigner</strong>
+            </div>
+            <div>
+              <span>Écart</span>
+              <strong id="objectiveGap">À renseigner</strong>
+            </div>
+          </div>
+          <p class="profit-note" id="profitHint">Renseignez le temps estimé pour calculer la rentabilité.</p>
+          <p class="profit-note">Indicateur avant cotisations, impôts et frais généraux de l'entreprise.</p>
         </div>
       </aside>
     </div>
