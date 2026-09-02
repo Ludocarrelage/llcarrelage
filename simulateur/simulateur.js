@@ -572,14 +572,36 @@
     return amount;
   }
 
-  function warnIfPaintingOverlap(warnings, mainSurface, packTask, otherTasks) {
-    if (!packTask.enabled || packTask.surface <= 0 || mainSurface <= 0) {
-      return;
+  function addPaintingSurfaceLineOutsidePack(lines, warnings, task, rate, mainSurface, isRelevant, packTask) {
+    if (!isRelevant || !task.enabled) {
+      return 0;
     }
 
-    const hasOverlap = otherTasks.some((task) => task.enabled && task.surface > 0 && task.surface + packTask.surface > mainSurface);
-    if (hasOverlap) {
-      addWarning(warnings, "Vérifier les surfaces : certaines prestations peuvent se chevaucher.");
+    warnIfSurfaceAboveMain(warnings, rate.label, task.surface, mainSurface);
+
+    if (task.surface <= 0) {
+      addLine(lines, buildSurfaceLine(rate.label, task.surface, rate.rate), 0, true);
+      addWarning(warnings, `${rate.label} : renseigner la surface concernée.`);
+      return 0;
+    }
+
+    const packSurface = packTask && packTask.enabled ? packTask.surface : 0;
+    const billableSurface = Math.max(0, task.surface - packSurface);
+
+    if (billableSurface <= 0) {
+      return 0;
+    }
+
+    const label = billableSurface < task.surface ? `${rate.label} - hors surface du pack` : rate.label;
+    const amount = lineAmount(billableSurface, rate.rate);
+    addLine(lines, buildSurfaceLine(label, billableSurface, rate.rate), amount, true);
+
+    return amount;
+  }
+
+  function warnIfPaintingPackAboveMain(warnings, packLabel, packTask, mainSurface) {
+    if (packTask.enabled && mainSurface > 0 && packTask.surface > mainSurface) {
+      addWarning(warnings, `Attention : la surface du pack ${packLabel} est supérieure à la surface totale.`);
     }
   }
 
@@ -595,17 +617,17 @@
     laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.lessivageMurs, paintingRates.lessivageMurs, state.wallsSurface, hasWalls);
     laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.sanding, paintingRates.poncageLeger, totalSurface, hasWalls || hasCeiling);
     laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.patching, paintingRates.rebouchageLocalise, totalSurface, hasWalls || hasCeiling);
-    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.wallSkim, paintingRates.ratissageMurs, state.wallsSurface, hasWalls);
-    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.ceilingSkim, paintingRates.ratissagePlafond, state.ceilingSurface, hasCeiling);
-    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.wallPrimer, paintingRates.primaire, state.wallsSurface, hasWalls);
-    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.ceilingPrimer, paintingRates.primaire, state.ceilingSurface, hasCeiling);
-    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.wallPaint, paintingRates.peintureMurs, state.wallsSurface, hasWalls);
-    laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.ceilingPaint, paintingRates.peinturePlafond, state.ceilingSurface, hasCeiling);
     laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.wallPack, paintingRates.packMurs, state.wallsSurface, hasWalls);
     laborSubtotal += addPaintingSurfaceLine(lines, warnings, state.ceilingPack, paintingRates.packPlafond, state.ceilingSurface, hasCeiling);
+    laborSubtotal += addPaintingSurfaceLineOutsidePack(lines, warnings, state.wallSkim, paintingRates.ratissageMurs, state.wallsSurface, hasWalls, state.wallPack);
+    laborSubtotal += addPaintingSurfaceLineOutsidePack(lines, warnings, state.ceilingSkim, paintingRates.ratissagePlafond, state.ceilingSurface, hasCeiling, state.ceilingPack);
+    laborSubtotal += addPaintingSurfaceLineOutsidePack(lines, warnings, state.wallPrimer, paintingRates.primaire, state.wallsSurface, hasWalls, state.wallPack);
+    laborSubtotal += addPaintingSurfaceLineOutsidePack(lines, warnings, state.ceilingPrimer, paintingRates.primaire, state.ceilingSurface, hasCeiling, state.ceilingPack);
+    laborSubtotal += addPaintingSurfaceLineOutsidePack(lines, warnings, state.wallPaint, paintingRates.peintureMurs, state.wallsSurface, hasWalls, state.wallPack);
+    laborSubtotal += addPaintingSurfaceLineOutsidePack(lines, warnings, state.ceilingPaint, paintingRates.peinturePlafond, state.ceilingSurface, hasCeiling, state.ceilingPack);
 
-    warnIfPaintingOverlap(warnings, state.wallsSurface, state.wallPack, [state.wallSkim, state.wallPrimer, state.wallPaint]);
-    warnIfPaintingOverlap(warnings, state.ceilingSurface, state.ceilingPack, [state.ceilingSkim, state.ceilingPrimer, state.ceilingPaint]);
+    warnIfPaintingPackAboveMain(warnings, "murs", state.wallPack, state.wallsSurface);
+    warnIfPaintingPackAboveMain(warnings, "plafond", state.ceilingPack, state.ceilingSurface);
 
     if (!lines.length) {
       addLine(lines, "Aucune prestation peinture sélectionnée", 0, true);

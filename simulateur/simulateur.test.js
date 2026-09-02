@@ -280,21 +280,61 @@ assert.strictEqual(result.laborAmount, 960);
 
 result = painting({
   surfaceType: "walls",
-  wallsSurface: 50,
-  wallPack: { enabled: true, surface: 30 },
-  wallPaint: { enabled: true, surface: 20 }
+  wallsSurface: 40,
+  wallPack: { enabled: true, surface: 40 },
+  wallPaint: { enabled: true, surface: 40 }
 });
-assert.strictEqual(result.laborAmount, 1540);
-assert(!result.warningLines.some((line) => line.includes("chevaucher")));
+assert.strictEqual(result.laborAmount, 1520);
+assert(!result.detailLines.some((line) => line.label.includes("Peinture murs - 2 couches -")));
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 40,
+  wallPack: { enabled: true, surface: 20 },
+  wallPaint: { enabled: true, surface: 40 }
+});
+assert.strictEqual(result.laborAmount, 1160);
+assert(result.detailLines.some((line) => line.label.includes("Peinture murs - 2 couches - hors surface du pack - 20 m² x 20 €/m²")));
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 40,
+  wallPack: { enabled: true, surface: 20 },
+  wallSkim: { enabled: true, surface: 40 }
+});
+assert.strictEqual(result.laborAmount, 1060);
+assert(result.detailLines.some((line) => line.label.includes("Ratissage complet murs - hors surface du pack - 20 m² x 15 €/m²")));
 
 result = painting({
   surfaceType: "ceiling",
   ceilingSurface: 20,
   ceilingPack: { enabled: true, surface: 12 },
-  ceilingPaint: { enabled: true, surface: 8 }
+  ceilingPaint: { enabled: true, surface: 20 }
 });
 assert.strictEqual(result.laborAmount, 776);
-assert(!result.warningLines.some((line) => line.includes("chevaucher")));
+assert(result.detailLines.some((line) => line.label.includes("Peinture plafond - 2 couches - hors surface du pack - 8 m² x 25 €/m²")));
+
+result = painting({
+  surfaceType: "ceiling",
+  ceilingSurface: 20,
+  ceilingPack: { enabled: true, surface: 20 },
+  ceilingSkim: { enabled: true, surface: 20 },
+  ceilingPrimer: { enabled: true, surface: 20 },
+  ceilingPaint: { enabled: true, surface: 20 }
+});
+assert.strictEqual(result.laborAmount, 960);
+assert(!result.detailLines.some((line) => line.label.includes("Ratissage complet plafond -")));
+assert(!result.detailLines.some((line) => line.label.includes("Primaire / sous-couche -")));
+assert(!result.detailLines.some((line) => line.label.includes("Peinture plafond - 2 couches -")));
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 40,
+  wallPack: { enabled: true, surface: 40 },
+  patching: { enabled: true, surface: 10 }
+});
+assert.strictEqual(result.laborAmount, 1580);
+assert(result.detailLines.some((line) => line.label.includes("Rebouchage localisé - 10 m² x 6 €/m²")));
 
 result = painting({
   surfaceType: "walls",
@@ -330,11 +370,10 @@ assert.strictEqual(result.total, 84);
 
 result = painting({
   surfaceType: "walls",
-  wallsSurface: 40,
-  wallPack: { enabled: true, surface: 30 },
-  wallPaint: { enabled: true, surface: 30 }
+  wallsSurface: 30,
+  wallPack: { enabled: true, surface: 40 }
 });
-assert(result.warningLines.some((line) => line.includes("chevaucher")));
+assert(result.warningLines.some((line) => line.includes("pack murs")));
 assert(Number.isFinite(result.total));
 
 console.log("simulateur tests OK");
