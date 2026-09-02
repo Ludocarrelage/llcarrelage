@@ -1085,7 +1085,15 @@
     document.querySelectorAll("[data-mode-panel]").forEach((panel) => {
       const isActive = panel.dataset.modePanel === activeMode;
       panel.classList.toggle("is-active", isActive);
-      panel.hidden = !isActive;
+
+      if (isActive) {
+        panel.hidden = false;
+        panel.removeAttribute("hidden");
+      } else {
+        panel.hidden = true;
+        panel.setAttribute("hidden", "");
+      }
+
       panel.setAttribute("aria-hidden", String(!isActive));
     });
   }
