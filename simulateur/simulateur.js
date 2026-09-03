@@ -884,11 +884,289 @@
     };
   }
 
+  function formatSquareCentimeters(value) {
+    const rounded = Math.round(numberValue(value) * 10) / 10;
+    return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(rounded)} cm²`;
+  }
+
+  function formatRatePercent(rate) {
+    return `${formatQuantity(numberValue(rate) * 100)} %`;
+  }
+
+  function formatTileRate(rate) {
+    const safeRate = numberValue(rate);
+    return safeRate > 0 ? `+${formatQuantity(safeRate)} €/m²` : "0 €/m²";
+  }
+
+  function getProjectQuantityText(result) {
+    const quantity = numberValue(result.state && result.state.quantity);
+
+    if (result.project && result.project.kind === "brokenTiles") {
+      return `${Math.floor(quantity)} carreau${Math.floor(quantity) > 1 ? "x" : ""}`;
+    }
+
+    return `${formatQuantity(quantity)} ${result.project ? result.project.unitLabel : ""}`.trim();
+  }
+
+  function isFinanceLine(line) {
+    const label = line.label || "";
+    const suppliesLineLabels = [...Object.values(suppliesLabels), ...Object.values(paintingSuppliesLabels)];
+
+    return (
+      label === "Déplacement" ||
+      label === "Autres frais" ||
+      label.startsWith("Marge imprévu") ||
+      suppliesLineLabels.includes(label)
+    );
+  }
+
+  function toClientLineLabel(label) {
+    let cleaned = String(label || "")
+      .replace(/^Format :\s*/, "")
+      .replace(/\(([^)]+)\)/u, "$1");
+
+    if (!cleaned.includes(" - ")) {
+      return cleaned;
+    }
+
+    const parts = cleaned.split(" - ");
+    const title = parts.shift();
+    const detail = parts
+      .join(" - ")
+      .replace(/\s+x\s+\d+(?:[,.]\d+)?\s*€\/\S+$/u, "")
+      .replace(/\s+x\s+\d+(?:[,.]\d+)?\s*€$/u, "");
+
+    return detail ? `${title} — ${detail}` : title;
+  }
+
+  function distributeRoundedTotal(lines, sourceTotal, targetTotal) {
+    const source = roundEuro(sourceTotal);
+    const target = roundEuro(targetTotal);
+    const positiveLines = lines.filter((line) => line.amount > 0);
+
+    if (!positiveLines.length || source <= 0 || target <= 0) {
+      return [];
+    }
+
+    let distributedTotal = 0;
+
+    return positiveLines.map((line, index) => {
+      const isLast = index === positiveLines.length - 1;
+      const amount = isLast ? target - distributedTotal : roundEuro((line.amount / source) * target);
+      distributedTotal += amount;
+
+      return {
+        label: toClientLineLabel(line.label),
+        amount
+      };
+    });
+  }
+
+  function adjustRowsToTotal(rows, expectedTotal) {
+    if (!rows.length) return rows;
+
+    const currentTotal = rows.reduce((sum, row) => sum + row.amount, 0);
+    const difference = roundDisplayEuro(roundEuro(expectedTotal) - currentTotal);
+
+    if (difference !== 0) {
+      const lastRow = rows[rows.length - 1];
+      lastRow.amount = Math.max(0, lastRow.amount + difference);
+    }
+
+    return rows;
+  }
+
+  function buildClientCopyRows(result) {
+    const laborLines = result.detailLines.filter((line) => !isFinanceLine(line));
+    const laborRows = distributeRoundedTotal(laborLines, result.laborAmount, result.laborAmount + result.marginAmount);
+    const rows = [...laborRows];
+
+    if (result.suppliesAmount > 0) {
+      rows.push({ label: "Fournitures", amount: roundEuro(result.suppliesAmount) });
+    }
+
+    if (result.feesAmount > 0) {
+      rows.push({ label: "Déplacement / frais", amount: roundEuro(result.feesAmount) });
+    }
+
+    return adjustRowsToTotal(rows, result.total);
+  }
+
+  function buildCopyRowsText(rows) {
+    if (!rows.length) {
+      return ["Aucune prestation chiffrée pour le moment"];
+    }
+
+    return rows.flatMap((row) => [row.label, formatCurrency(row.amount), ""]).slice(0, -1);
+  }
+
+  function buildClientCopyText(result) {
+    const tileFormatInfo = result.tileFormatInfo || getTileFormatInfo(result.state.tileLengthCm, result.state.tileWidthCm);
+    const lines = [
+      "ESTIMATION LL CARRELAGE",
+      "",
+      `Chantier : ${result.project.label}`,
+      `Quantité : ${getProjectQuantityText(result)}`
+    ];
+
+    if (tileFormatInfo.hasDimensions) {
+      lines.push(`Carrelage : ${formatQuantity(tileFormatInfo.lengthCm)} × ${formatQuantity(tileFormatInfo.widthCm)} cm`);
+    }
+
+    lines.push("", "TRAVAUX", ...buildCopyRowsText(buildClientCopyRows(result)), "", `TOTAL ESTIMÉ : ${formatCurrency(result.total)}`, "", "Estimation à confirmer après vérification du chantier.");
+
+    return lines.join("\n");
+  }
+
+  function buildProfitabilityFromState(result) {
+    const state = result.state || {};
+    return calculateProfitability({
+      totalClient: result.total,
+      realSuppliesCost: state.realSuppliesCost,
+      realTravelCost: state.realTravelCost,
+      wasteCost: state.wasteCost,
+      otherRealCost: state.otherRealCost,
+      estimatedHours: state.estimatedHours,
+      hourlyTarget: state.hourlyTarget
+    });
+  }
+
+  function buildInternalMemoText(result) {
+    const state = result.state || {};
+    const marginRate = result.project.kind === "brokenTiles" ? 0 : state.marginRate;
+    const billedLabor = result.laborAmount + result.marginAmount;
+    const profitability = buildProfitabilityFromState(result);
+    const isProfitable =
+      profitability.statusKey === "empty" ? "NON DISPONIBLE" : profitability.statusKey === "good" || profitability.statusKey === "strong" ? "OUI" : "NON";
+    const tileFormatInfo = result.tileFormatInfo || getTileFormatInfo(state.tileLengthCm, state.tileWidthCm);
+    const lines = [
+      "MÉMO CHANTIER — LL CARRELAGE",
+      "",
+      "CHANTIER",
+      result.project.label,
+      `Quantité : ${getProjectQuantityText(result)}`
+    ];
+
+    if (tileFormatInfo.hasDimensions) {
+      lines.push(
+        "",
+        "FORMAT CARRELAGE",
+        `Dimensions : ${formatQuantity(tileFormatInfo.lengthCm)} × ${formatQuantity(tileFormatInfo.widthCm)} cm`,
+        `Surface d'un carreau : ${formatSquareCentimeters(tileFormatInfo.areaCm2)}`,
+        `Catégorie : ${tileFormatInfo.category}`,
+        `Peigne conseillé : ${tileFormatInfo.notch}`,
+        `Encollage : ${tileFormatInfo.bonding}`,
+        `Supplément format : ${formatTileRate(tileFormatInfo.rate)}`
+      );
+    }
+
+    lines.push(
+      "",
+      "PRESTATIONS",
+      ...result.detailLines.flatMap((line) => [line.label, formatInternalCurrency(line.amount), ""]).slice(0, -1),
+      "",
+      "FINANCES",
+      "Main-d'œuvre avant marge :",
+      formatInternalCurrency(result.laborAmount),
+      "Marge :",
+      formatRatePercent(marginRate),
+      "Montant marge :",
+      formatInternalCurrency(result.marginAmount),
+      "Main-d'œuvre facturée :",
+      formatInternalCurrency(billedLabor),
+      "Fournitures :",
+      formatInternalCurrency(result.suppliesAmount),
+      "Frais :",
+      formatInternalCurrency(result.feesAmount),
+      "TOTAL CLIENT :",
+      formatInternalCurrency(result.total),
+      "",
+      "RENTABILITÉ",
+      "Coût réel estimé :",
+      formatInternalCurrency(profitability.directCosts),
+      "Temps estimé :",
+      state.estimatedHours > 0 ? `${formatQuantity(state.estimatedHours)} h` : "À renseigner",
+      "Taux horaire estimé :",
+      profitability.hourlyYield === null ? "À renseigner" : `${formatInternalCurrency(profitability.hourlyYield)}/h`,
+      "Objectif :",
+      `${formatQuantity(profitability.hourlyTarget)} €/h`,
+      "Rentabilité :",
+      profitability.status,
+      "CHANTIER RENTABLE :",
+      isProfitable
+    );
+
+    return lines.join("\n");
+  }
+
+  function getPaintingSurfaceLines(state) {
+    return [
+      state.wallsSurface > 0 ? `Murs : ${formatQuantity(state.wallsSurface)} m²` : "",
+      state.ceilingSurface > 0 ? `Plafond : ${formatQuantity(state.ceilingSurface)} m²` : ""
+    ].filter(Boolean);
+  }
+
+  function buildPaintingClientCopyText(result) {
+    return [
+      "ESTIMATION LL CARRELAGE",
+      "",
+      `Peinture : ${result.surfaceLabel}`,
+      ...getPaintingSurfaceLines(result.state),
+      "",
+      "TRAVAUX",
+      ...buildCopyRowsText(buildClientCopyRows(result)),
+      "",
+      `TOTAL ESTIMÉ : ${formatCurrency(result.total)}`,
+      "",
+      "Estimation à confirmer après vérification du chantier."
+    ].join("\n");
+  }
+
+  function buildPaintingInternalMemoText(result) {
+    const state = result.state || {};
+    const billedLabor = result.laborAmount + result.marginAmount;
+
+    return [
+      "MÉMO CHANTIER — LL CARRELAGE",
+      "",
+      "CHANTIER PEINTURE",
+      `Type de surface : ${result.surfaceLabel}`,
+      ...getPaintingSurfaceLines(state),
+      "",
+      "PRESTATIONS",
+      ...result.detailLines.flatMap((line) => [line.label, formatInternalCurrency(line.amount), ""]).slice(0, -1),
+      "",
+      "FINANCES",
+      "Prestations avant marge :",
+      formatInternalCurrency(result.laborAmount),
+      "Marge :",
+      formatRatePercent(state.marginRate),
+      "Montant marge :",
+      formatInternalCurrency(result.marginAmount),
+      "Prestations facturées :",
+      formatInternalCurrency(billedLabor),
+      "Fournitures :",
+      formatInternalCurrency(result.suppliesAmount),
+      "Frais :",
+      formatInternalCurrency(result.feesAmount),
+      "TOTAL CLIENT :",
+      formatInternalCurrency(result.total),
+      "",
+      "RENTABILITÉ",
+      "Non disponible pour le simulateur peinture."
+    ].join("\n");
+  }
+
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
       calculateEstimate,
       calculatePaintingEstimate,
       getTileFormatInfo,
+      buildClientCopyRows,
+      buildClientCopyText,
+      buildInternalMemoText,
+      buildPaintingClientCopyText,
+      buildPaintingInternalMemoText,
       calculateProfitability,
       projectRates,
       paintingRates,
@@ -1003,11 +1281,6 @@
     }
   }
 
-  function formatAreaCm2(value) {
-    const rounded = Math.round(numberValue(value) * 10) / 10;
-    return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(rounded)} cm²`;
-  }
-
   function formatFormatRate(rate) {
     const safeRate = numberValue(rate);
     return safeRate > 0 ? `+${formatQuantity(safeRate)} €/m²` : "0 €/m²";
@@ -1033,7 +1306,7 @@
         : formatFormatRate(info.rate);
 
     setText("tileFormatCategory", info.category);
-    setText("tileAreaCm2", formatAreaCm2(info.areaCm2));
+    setText("tileAreaCm2", formatSquareCentimeters(info.areaCm2));
     setText("tileNotch", info.notch);
     setText("tileBonding", info.bonding);
     setText("tileFormatRate", rateText);
@@ -1286,33 +1559,6 @@
     }
   }
 
-  function getPaintingDetailText() {
-    const result = lastPaintingCalculation;
-    const state = result.state;
-    const detailLines = result.detailLines
-      .map((line) => `${line.label} : ${formatCurrency(line.amount)}`)
-      .join("\n");
-    const surfaces = [
-      state.wallsSurface > 0 ? `Murs : ${formatQuantity(state.wallsSurface)} m²` : "",
-      state.ceilingSurface > 0 ? `Plafond : ${formatQuantity(state.ceilingSurface)} m²` : ""
-    ].filter(Boolean).join("\n");
-
-    return [
-      "LL Carrelage - estimation peinture",
-      `Type de surface : ${result.surfaceLabel}`,
-      surfaces || "Surface : à renseigner",
-      "",
-      detailLines,
-      "",
-      `Prestations : ${formatCurrency(result.laborAmount)}`,
-      `Fournitures : ${formatCurrency(result.suppliesAmount)}`,
-      `Déplacement + frais : ${formatCurrency(result.feesAmount)}`,
-      `Marge imprévu : ${formatCurrency(result.marginAmount)}`,
-      `Total estimé : ${formatCurrency(result.total)}`,
-      `Fourchette client : ${formatCurrency(result.low)} - ${formatCurrency(result.high)}`
-    ].join("\n");
-  }
-
   function setEstimatorMode(mode) {
     const activeMode = mode === "peinture" ? "peinture" : "carrelage";
 
@@ -1385,8 +1631,11 @@
     });
 
     document.getElementById("paintResetButton").addEventListener("click", resetPaintingEstimator);
-    document.getElementById("paintCopyEstimateButton").addEventListener("click", () => {
-      copyText(getPaintingDetailText(), "Estimation peinture copiée.", paintCopyStatus);
+    document.getElementById("paintCopyEstimateButton").addEventListener("click", (event) => {
+      copyWithButtonFeedback(event.currentTarget, buildPaintingClientCopyText(lastPaintingCalculation), "Copié pour le client ✓", paintCopyStatus);
+    });
+    document.getElementById("paintCopyMemoButton").addEventListener("click", (event) => {
+      copyWithButtonFeedback(event.currentTarget, buildPaintingInternalMemoText(lastPaintingCalculation), "Mémo copié ✓", paintCopyStatus);
     });
   }
 
@@ -1644,29 +1893,11 @@
   }
 
   function getClientText() {
-    return `Estimation indicative : environ ${formatCurrency(lastCalculation.total)}, à confirmer après visite et établissement du devis définitif.`;
+    return buildClientCopyText(lastCalculation);
   }
 
   function getDetailText() {
-    const project = lastCalculation.project;
-    const state = lastCalculation.state;
-    const detailLines = lastCalculation.detailLines
-      .map((line) => `${line.label} : ${formatCurrency(line.amount)}`)
-      .join("\n");
-
-    return [
-      "LL Carrelage - estimation chantier",
-      `${project.label} : ${formatQuantity(state.quantity)} ${project.unitLabel}`,
-      "",
-      detailLines,
-      "",
-      `Main-d'œuvre : ${formatCurrency(lastCalculation.laborAmount)}`,
-      `Fournitures : ${formatCurrency(lastCalculation.suppliesAmount)}`,
-      `Déplacement + frais : ${formatCurrency(lastCalculation.feesAmount)}`,
-      `Marge imprévu : ${formatCurrency(lastCalculation.marginAmount)}`,
-      `Total estimé : ${formatCurrency(lastCalculation.total)}`,
-      `Fourchette client : ${formatCurrency(lastCalculation.low)} - ${formatCurrency(lastCalculation.high)}`
-    ].join("\n");
+    return buildInternalMemoText(lastCalculation);
   }
 
   async function copyText(text, successMessage, statusElement = copyStatus) {
@@ -1687,11 +1918,25 @@
       if (statusElement) {
         statusElement.textContent = successMessage;
       }
+      return true;
     } catch (error) {
       if (statusElement) {
         statusElement.textContent = "Copie impossible sur ce navigateur.";
       }
+      return false;
     }
+  }
+
+  async function copyWithButtonFeedback(button, text, successMessage, statusElement = copyStatus) {
+    const normalText = button.textContent;
+    const copied = await copyText(text, successMessage, statusElement);
+
+    if (!copied) return;
+
+    button.textContent = successMessage;
+    window.setTimeout(() => {
+      button.textContent = normalText;
+    }, 1800);
   }
 
   function initEstimator() {
@@ -1733,11 +1978,11 @@
     });
 
     document.getElementById("resetButton").addEventListener("click", resetEstimator);
-    document.getElementById("copyEstimateButton").addEventListener("click", () => {
-      copyText(getClientText(), "Estimation client copiée.");
+    document.getElementById("copyEstimateButton").addEventListener("click", (event) => {
+      copyWithButtonFeedback(event.currentTarget, getClientText(), "Copié pour le client ✓");
     });
-    document.getElementById("copyDetailButton").addEventListener("click", () => {
-      copyText(getDetailText(), "Détail chantier copié.");
+    document.getElementById("copyDetailButton").addEventListener("click", (event) => {
+      copyWithButtonFeedback(event.currentTarget, getDetailText(), "Mémo copié ✓");
     });
 
     initModeSwitcher();
@@ -1745,6 +1990,11 @@
   }
 
   window.LLJobEstimator = {
+    buildClientCopyRows,
+    buildClientCopyText,
+    buildInternalMemoText,
+    buildPaintingClientCopyText,
+    buildPaintingInternalMemoText,
     calculateEstimate,
     calculatePaintingEstimate,
     calculateProfitability,

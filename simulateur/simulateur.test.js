@@ -4,6 +4,11 @@ const {
   calculateEstimate,
   calculatePaintingEstimate,
   getTileFormatInfo,
+  buildClientCopyRows,
+  buildClientCopyText,
+  buildInternalMemoText,
+  buildPaintingClientCopyText,
+  buildPaintingInternalMemoText,
   calculateProfitability,
   projectRates,
   paintingRates,
@@ -274,6 +279,58 @@ assertTileFormat(120, 240, {
   assert.strictEqual(formatResult.laborAmount, expectedLabor, `${tileLengthCm} x ${tileWidthCm}`);
 });
 
+result = estimate({
+  tileLengthCm: 80,
+  tileWidthCm: 80,
+  prep: ["primer"],
+  prepSurfaces: { primer: 10 },
+  siliconeEnabled: true,
+  siliconeLength: 5,
+  suppliesEstimate: 150,
+  travelCost: 50,
+  marginRate: 0.1,
+  realSuppliesCost: 100,
+  realTravelCost: 20,
+  wasteCost: 10,
+  otherRealCost: 30,
+  estimatedHours: 20,
+  hourlyTarget: 40
+});
+const clientRows = buildClientCopyRows(result);
+const clientText = buildClientCopyText(result);
+const internalMemo = buildInternalMemoText(result);
+const forbiddenClientWords = [
+  "Marge",
+  "10 %",
+  "Bénéfice",
+  "Profit",
+  "Rentabilité",
+  "Rentable",
+  "Pas rentable",
+  "Coût réel",
+  "Taux horaire",
+  "Objectif horaire"
+];
+
+assert.strictEqual(clientRows.reduce((sum, line) => sum + line.amount, 0), result.total);
+forbiddenClientWords.forEach((word) => {
+  assert(!clientText.includes(word), `client text leaks ${word}`);
+});
+assert(clientText.includes("Carrelage : 80 × 80 cm"));
+assert(clientText.includes(`TOTAL ESTIMÉ : ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(result.total)}`));
+assert(!clientText.includes("€/m²"));
+assert(internalMemo.includes("Marge :\n10 %"));
+assert(internalMemo.includes("Montant marge :"));
+assert(internalMemo.includes("Coût réel estimé :"));
+assert(internalMemo.includes("Temps estimé :\n20 h"));
+assert(internalMemo.includes("Taux horaire estimé :"));
+assert(internalMemo.includes("Rentabilité :"));
+assert(internalMemo.includes("Dimensions : 80 × 80 cm"));
+assert(internalMemo.includes("Surface d'un carreau : 6 400 cm²"));
+assert(internalMemo.includes("Peigne conseillé : 12 mm"));
+assert(internalMemo.includes("Encollage : Double encollage obligatoire"));
+assert(internalMemo.includes("Supplément format : +10 €/m²"));
+
 result = calculateEstimate({
   projectType: "brokenTiles",
   quantity: 3,
@@ -375,6 +432,13 @@ result = calculateEstimate({
 assert.strictEqual(result.laborAmount, 120);
 assert(!result.detailLines.some((line) => line.label.includes("Dalle XXL")));
 assert(!result.detailLines.some((line) => line.label.includes("3 carreau x 12")));
+const brokenClientText = buildClientCopyText(result);
+const brokenInternalMemo = buildInternalMemoText(result);
+assert(brokenClientText.includes("Remplacement de carreaux cassés"));
+assert(brokenClientText.includes("3 carreaux"));
+assert(!brokenClientText.includes("Dalle XXL"));
+assert(brokenInternalMemo.includes("Dimensions : 120 × 240 cm"));
+assert(brokenInternalMemo.includes("Supplément format : +20 €/m²"));
 
 result = calculateEstimate({
   projectType: "brokenTiles",
@@ -676,6 +740,13 @@ assert.strictEqual(result.marginAmount, 40);
 assert.strictEqual(result.suppliesAmount, 100);
 assert.strictEqual(result.feesAmount, 20);
 assert.strictEqual(result.total, 960);
+const paintingClientText = buildPaintingClientCopyText(result);
+const paintingInternalMemo = buildPaintingInternalMemoText(result);
+assert(!paintingClientText.includes("Marge"));
+assert(!paintingClientText.includes("Rentabilité"));
+assert(paintingClientText.includes("TOTAL ESTIMÉ"));
+assert(paintingInternalMemo.includes("Marge :\n5 %"));
+assert(paintingInternalMemo.includes("TOTAL CLIENT"));
 
 result = painting({
   surfaceType: "walls",

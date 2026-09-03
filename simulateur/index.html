@@ -10,7 +10,7 @@
   <title>Estimation rapide chantier | LL Carrelage</title>
   <link rel="icon" type="image/jpeg" href="/logo-ll-carrelage.jpg" />
   <link rel="stylesheet" href="/simulateur/style.css?v=20260902-1" />
-  <script src="/simulateur/simulateur.js?v=20260903-3" defer></script>
+  <script src="/simulateur/simulateur.js?v=20260903-4" defer></script>
 </head>
 <body>
   <main class="estimator-shell" id="simulateur-prive">
@@ -474,8 +474,8 @@
 
         <div class="form-actions">
           <button class="btn btn-secondary" id="resetButton" type="button">Réinitialiser</button>
-          <button class="btn btn-primary" id="copyEstimateButton" type="button">Copier l'estimation</button>
-          <button class="btn btn-dark" id="copyDetailButton" type="button">Copier le détail</button>
+          <button class="btn btn-primary" id="copyEstimateButton" type="button">Copier pour le client</button>
+          <button class="btn btn-dark" id="copyDetailButton" type="button">Copier mémo pour moi</button>
         </div>
         <p class="copy-status" id="copyStatus" role="status" aria-live="polite"></p>
       </form>
@@ -933,7 +933,8 @@
 
           <div class="form-actions">
             <button class="btn btn-secondary" id="paintResetButton" type="button">Réinitialiser peinture</button>
-            <button class="btn btn-primary" id="paintCopyEstimateButton" type="button">Copier l'estimation peinture</button>
+            <button class="btn btn-primary" id="paintCopyEstimateButton" type="button">Copier pour le client</button>
+            <button class="btn btn-dark" id="paintCopyMemoButton" type="button">Copier mémo pour moi</button>
           </div>
           <p class="copy-status" id="paintCopyStatus" role="status" aria-live="polite"></p>
         </form>
