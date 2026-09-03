@@ -176,6 +176,166 @@ assert.strictEqual(result.total, 1200);
   assert.strictEqual(formatResult.laborAmount, expectedLabor, tileFormat);
 });
 
+result = calculateEstimate({
+  projectType: "brokenTiles",
+  quantity: 3,
+  tileFormat: "standard",
+  supports: ["standard"],
+  removal: "none",
+  prep: ["none"],
+  waterproof: "none",
+  marginRate: 0,
+  suppliesEstimate: 0,
+  travelCost: 0,
+  otherCost: 0
+});
+assert.strictEqual(result.laborAmount, 120);
+
+result = calculateEstimate({
+  projectType: "brokenTiles",
+  quantity: 3,
+  tileFormat: "standard",
+  supports: ["standard"],
+  removal: "none",
+  prep: ["sanding"],
+  prepSurfaces: { sanding: 2 },
+  waterproof: "none",
+  marginRate: 0,
+  suppliesEstimate: 0,
+  travelCost: 0,
+  otherCost: 0
+});
+assert.strictEqual(result.laborAmount, 130);
+assert(result.detailLines.some((line) => line.label.includes("Ponçage / nettoyage - 2 m² x 5 €/m²")));
+
+result = calculateEstimate({
+  projectType: "brokenTiles",
+  quantity: 2,
+  tileFormat: "standard",
+  supports: ["standard"],
+  removal: "none",
+  prep: ["primer"],
+  prepSurfaces: { primer: 3 },
+  waterproof: "none",
+  marginRate: 0,
+  suppliesEstimate: 0,
+  travelCost: 0,
+  otherCost: 0
+});
+assert.strictEqual(result.laborAmount, 89);
+assert(result.detailLines.some((line) => line.label.includes("Primaire d'accrochage - 3 m² x 3 €/m²")));
+
+result = calculateEstimate({
+  projectType: "brokenTiles",
+  quantity: 4,
+  tileFormat: "standard",
+  supports: ["standard"],
+  removal: "none",
+  prep: ["sanding", "primer"],
+  prepSurfaces: { sanding: 3, primer: 3 },
+  waterproof: "none",
+  siliconeEnabled: true,
+  siliconeLength: 2,
+  marginRate: 0,
+  suppliesEstimate: 0,
+  travelCost: 0,
+  otherCost: 0
+});
+assert.strictEqual(result.laborAmount, 200);
+
+result = calculateEstimate({
+  projectType: "brokenTiles",
+  quantity: 2,
+  tileFormat: "standard",
+  supports: ["standard"],
+  removal: "none",
+  prep: ["none"],
+  waterproof: "none",
+  extraBaseboardsEnabled: false,
+  extraBaseboardsLength: 0,
+  siliconeEnabled: false,
+  siliconeLength: 0,
+  profileEnabled: false,
+  profileLength: 0,
+  thresholdCount: 0,
+  marginRate: 0,
+  suppliesEstimate: 0,
+  travelCost: 0,
+  otherCost: 0
+});
+assert.strictEqual(result.laborAmount, 80);
+
+result = calculateEstimate({
+  projectType: "brokenTiles",
+  quantity: 3,
+  tileFormat: "xxl",
+  supports: ["notFlat"],
+  removal: "none",
+  prep: ["none"],
+  waterproof: "none",
+  marginRate: 0,
+  suppliesEstimate: 0,
+  travelCost: 0,
+  otherCost: 0
+});
+assert.strictEqual(result.laborAmount, 120);
+assert(!result.detailLines.some((line) => line.label.includes("XXL")));
+assert(!result.detailLines.some((line) => line.label.includes("3 carreau x 12")));
+
+result = calculateEstimate({
+  projectType: "brokenTiles",
+  quantity: 3,
+  tileFormat: "standard",
+  supports: ["notFlat"],
+  supportSurface: 2,
+  removal: "none",
+  prep: ["none"],
+  waterproof: "none",
+  marginRate: 0,
+  suppliesEstimate: 0,
+  travelCost: 0,
+  otherCost: 0
+});
+assert.strictEqual(result.laborAmount, 144);
+assert(result.detailLines.some((line) => line.label.includes("Sol ou mur pas plat - 2 m² x 12 €/m²")));
+
+result = calculateEstimate({
+  projectType: "brokenTiles",
+  quantity: 3,
+  tileFormat: "standard",
+  supports: ["standard"],
+  removal: "tiles",
+  removalSurface: 2,
+  prep: ["none"],
+  waterproof: "none",
+  marginRate: 0,
+  suppliesEstimate: 0,
+  travelCost: 0,
+  otherCost: 0
+});
+assert.strictEqual(result.laborAmount, 150);
+assert(result.detailLines.some((line) => line.label.includes("Dépose carrelage - 2 m² x 15 €/m²")));
+
+result = calculateEstimate({
+  projectType: "brokenTiles",
+  quantity: 2,
+  tileFormat: "standard",
+  supports: ["standard"],
+  removal: "none",
+  prep: ["none"],
+  waterproof: "spec",
+  waterproofSurface: 2,
+  extraBaseboardsEnabled: true,
+  extraBaseboardsLength: 1.5,
+  marginRate: 0,
+  suppliesEstimate: 0,
+  travelCost: 0,
+  otherCost: 0
+});
+assert.strictEqual(result.laborAmount, 119);
+assert(result.detailLines.some((line) => line.label.includes("SPEC sous carrelage - 2 m² x 12 €/m²")));
+assert(result.detailLines.some((line) => line.label.includes("Plinthes en plus - 1,5 ml x 10 €/ml")));
+
 result = estimate({ removal: "tiles", removalSurface: 25 });
 assert.strictEqual(result.laborAmount, 1575);
 assert(result.detailLines.some((line) => line.label.includes("25 m² x 15 €/m²")));

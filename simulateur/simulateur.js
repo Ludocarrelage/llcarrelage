@@ -208,6 +208,7 @@
     quantity: 0,
     tileFormat: "standard",
     supports: ["standard"],
+    supportSurface: 0,
     removal: "none",
     removalSurface: 0,
     prep: ["none"],
@@ -313,6 +314,7 @@
     if (merged.supports.some((support) => support !== "standard")) {
       merged.supports = merged.supports.filter((support) => support !== "standard");
     }
+    merged.supportSurface = numberValue(merged.supportSurface);
 
     merged.prep = normalizeList(merged.prep, Object.keys(prepRates), "none");
     if (merged.prep.some((prepKey) => prepKey !== "none")) {
@@ -418,13 +420,32 @@
         laborSubtotal += amount;
         addLine(lines, `${support.label} - ${formatQuantity(quantity)} ${unit} x ${support.rate} €/${unit}`, amount, false);
       });
+    }
+
+    if (isClassic || isBrokenTiles) {
+      if (isBrokenTiles) {
+        state.supports.forEach((supportKey) => {
+          if (supportKey === "standard") return;
+          const support = supportRates[supportKey];
+          if (!support) return;
+          const amount = lineAmount(state.supportSurface, support.rate);
+          laborSubtotal += amount;
+          addLine(lines, buildSurfaceLine(support.label, state.supportSurface, support.rate), amount, true);
+
+          if (state.supportSurface <= 0) {
+            addWarning(warnings, "Support : renseigner la surface concernée.");
+          }
+        });
+      }
 
       const removal = removalRates[state.removal] || removalRates.none;
       if (state.removal !== "none") {
         const removalAmount = lineAmount(state.removalSurface, removal.rate);
         laborSubtotal += removalAmount;
         addLine(lines, buildSurfaceLine(removal.label, state.removalSurface, removal.rate), removalAmount, true);
-        warnIfSurfaceAboveMain(warnings, removal.label, state.removalSurface, quantity);
+        if (isClassic) {
+          warnIfSurfaceAboveMain(warnings, removal.label, state.removalSurface, quantity);
+        }
 
         if (state.removalSurface <= 0) {
           addWarning(warnings, "Dépose : renseigner la surface concernée.");
@@ -439,7 +460,9 @@
         const amount = lineAmount(prepSurface, prep.rate);
         laborSubtotal += amount;
         addLine(lines, buildSurfaceLine(prep.label, prepSurface, prep.rate), amount, true);
-        warnIfSurfaceAboveMain(warnings, prep.label, prepSurface, quantity);
+        if (isClassic) {
+          warnIfSurfaceAboveMain(warnings, prep.label, prepSurface, quantity);
+        }
 
         if (prepSurface <= 0) {
           addWarning(warnings, `${prep.label} : renseigner la surface concernée.`);
@@ -451,31 +474,35 @@
         const waterproofAmount = lineAmount(state.waterproofSurface, waterproof.rate);
         laborSubtotal += waterproofAmount;
         addLine(lines, buildSurfaceLine(waterproof.label, state.waterproofSurface, waterproof.rate), waterproofAmount, true);
-        warnIfSurfaceAboveMain(warnings, waterproof.label, state.waterproofSurface, quantity);
+        if (isClassic) {
+          warnIfSurfaceAboveMain(warnings, waterproof.label, state.waterproofSurface, quantity);
+        }
 
         if (state.waterproofSurface <= 0) {
           addWarning(warnings, "Étanchéité : renseigner la surface concernée.");
         }
       }
 
-      if (state.supports.includes("oldTiles") && state.removal !== "none") {
-        addWarning(warnings, "Ancien carrelage + dépose : vérifier que ces deux suppléments ne couvrent pas le même travail.");
-      }
+      if (isClassic) {
+        if (state.supports.includes("oldTiles") && state.removal !== "none") {
+          addWarning(warnings, "Ancien carrelage + dépose : vérifier que ces deux suppléments ne couvrent pas le même travail.");
+        }
 
-      if (state.supports.includes("oldTiles") && (state.prep.includes("sanding") || state.prep.includes("primer"))) {
-        addWarning(warnings, "Ancien carrelage + préparation : vérifier que ces deux suppléments ne couvrent pas le même travail.");
-      }
+        if (state.supports.includes("oldTiles") && (state.prep.includes("sanding") || state.prep.includes("primer"))) {
+          addWarning(warnings, "Ancien carrelage + préparation : vérifier que ces deux suppléments ne couvrent pas le même travail.");
+        }
 
-      if (state.supports.includes("notFlat") && (state.prep.includes("lightLeveling") || state.prep.includes("heavyLeveling"))) {
-        addWarning(warnings, "Support pas plat + ragréage : vérifier que ces deux suppléments ne couvrent pas le même travail.");
-      }
+        if (state.supports.includes("notFlat") && (state.prep.includes("lightLeveling") || state.prep.includes("heavyLeveling"))) {
+          addWarning(warnings, "Support pas plat + ragréage : vérifier que ces deux suppléments ne couvrent pas le même travail.");
+        }
 
-      if (state.supports.includes("wood") && state.waterproof === "mat") {
-        addWarning(warnings, "Support bois + natte : vérifier que ces deux suppléments ne couvrent pas le même travail.");
+        if (state.supports.includes("wood") && state.waterproof === "mat") {
+          addWarning(warnings, "Support bois + natte : vérifier que ces deux suppléments ne couvrent pas le même travail.");
+        }
       }
     }
 
-    if (project.kind !== "baseboards" && project.kind !== "brokenTiles" && project.kind !== "grout") {
+    if (project.kind !== "baseboards" && project.kind !== "grout") {
       if (state.extraBaseboardsEnabled) {
         const baseboardsAmount = lineAmount(state.extraBaseboardsLength, 10);
         laborSubtotal += baseboardsAmount;
@@ -818,6 +845,7 @@
     prepHeavySurface: document.getElementById("prepHeavySurface"),
     prepSandingSurface: document.getElementById("prepSandingSurface"),
     prepPrimerSurface: document.getElementById("prepPrimerSurface"),
+    supportSurface: document.getElementById("supportSurface"),
     waterproofSurface: document.getElementById("waterproofSurface")
   };
 
@@ -852,6 +880,7 @@
       quantity: getInputNumber("quantityInput"),
       tileFormat: getCheckedRadio("tileFormat") || "standard",
       supports: getCheckedValues(["supportStandard", "supportOldTiles", "supportWood", "supportUnknown", "supportNotFlat"]),
+      supportSurface: getInputNumber("supportSurface"),
       removal: getCheckedRadio("removal") || "none",
       removalSurface: getInputNumber("removalSurface"),
       prep: getCheckedValues(["prepNone", "prepLight", "prepHeavy", "prepSanding", "prepPrimer"]),
@@ -1303,10 +1332,11 @@
   function toggleSections() {
     const project = projectRates[projectSelect.value] || projectRates.interior;
     const isClassic = project.kind === "classic";
-    const showExtraBaseboards = isClassic;
+    const hasDetailedExtras = isClassic || project.kind === "brokenTiles";
+    const showExtraBaseboards = hasDetailedExtras;
 
     document.querySelectorAll("[data-section='format'], [data-section='support'], [data-section='removal'], [data-section='prep'], [data-section='waterproof']").forEach((section) => {
-      section.classList.toggle("is-hidden", !isClassic);
+      section.classList.toggle("is-hidden", !hasDetailedExtras);
     });
 
     const extraBaseboardsSection = document.querySelector("[data-section='extraBaseboards']");
@@ -1327,13 +1357,16 @@
   function syncSpecificSurfaceFields() {
     const project = projectRates[projectSelect.value] || projectRates.interior;
     const isClassic = project.kind === "classic";
+    const hasSurfaceExtras = isClassic || project.kind === "brokenTiles";
+    const hasBrokenTilesSupport = project.kind === "brokenTiles" && getCheckedValues(["supportOldTiles", "supportWood", "supportUnknown", "supportNotFlat"]).length > 0;
     const visibleState = {
-      removal: isClassic && getCheckedRadio("removal") !== "none",
-      prepLight: isClassic && isChecked("prepLight"),
-      prepHeavy: isClassic && isChecked("prepHeavy"),
-      prepSanding: isClassic && isChecked("prepSanding"),
-      prepPrimer: isClassic && isChecked("prepPrimer"),
-      waterproof: isClassic && getCheckedRadio("waterproof") !== "none"
+      support: hasBrokenTilesSupport,
+      removal: hasSurfaceExtras && getCheckedRadio("removal") !== "none",
+      prepLight: hasSurfaceExtras && isChecked("prepLight"),
+      prepHeavy: hasSurfaceExtras && isChecked("prepHeavy"),
+      prepSanding: hasSurfaceExtras && isChecked("prepSanding"),
+      prepPrimer: hasSurfaceExtras && isChecked("prepPrimer"),
+      waterproof: hasSurfaceExtras && getCheckedRadio("waterproof") !== "none"
     };
 
     document.querySelectorAll(".option-surface-field[data-surface-for]").forEach((field) => {
@@ -1344,6 +1377,9 @@
   function prefillSpecificSurface(inputId) {
     const input = surfaceInputs[inputId];
     if (!input) return;
+
+    const project = projectRates[projectSelect.value] || projectRates.interior;
+    if (project.kind !== "classic") return;
 
     const currentValue = numberValue(input.value);
     const mainQuantity = numberValue(quantityInput.value);

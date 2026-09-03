@@ -10,7 +10,7 @@
   <title>Estimation rapide chantier | LL Carrelage</title>
   <link rel="icon" type="image/jpeg" href="/logo-ll-carrelage.jpg" />
   <link rel="stylesheet" href="/simulateur/style.css?v=20260902-1" />
-  <script src="/simulateur/simulateur.js?v=20260903-1" defer></script>
+  <script src="/simulateur/simulateur.js?v=20260903-2" defer></script>
 </head>
 <body>
   <main class="estimator-shell" id="simulateur-prive">
@@ -151,6 +151,14 @@
               <span class="option-title">Sol ou mur pas plat</span>
               <span class="option-price">+12 €/m²</span>
             </label>
+          </div>
+          <div class="option-surface-field option-wide" data-surface-for="support">
+            <label class="field-label" for="supportSurface">Surface concernée</label>
+            <div class="input-with-unit compact-unit">
+              <input id="supportSurface" name="supportSurface" type="number" min="0" step="0.1" inputmode="decimal" value="0" placeholder="0" />
+              <span>m²</span>
+            </div>
+            <p class="field-help">À renseigner seulement pour un remplacement de carreaux avec support particulier.</p>
           </div>
         </section>
 
