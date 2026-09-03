@@ -10,7 +10,7 @@
   <title>Estimation rapide chantier | LL Carrelage</title>
   <link rel="icon" type="image/jpeg" href="/logo-ll-carrelage.jpg" />
   <link rel="stylesheet" href="/simulateur/style.css?v=20260902-1" />
-  <script src="/simulateur/simulateur.js?v=20260902-2" defer></script>
+  <script src="/simulateur/simulateur.js?v=20260902-3" defer></script>
 </head>
 <body>
   <main class="estimator-shell" id="simulateur-prive">
@@ -795,6 +795,51 @@
           <section class="estimator-section">
             <div class="section-heading">
               <span>8</span>
+              <h2>Éléments complémentaires</h2>
+            </div>
+            <label class="toggle-line">
+              <input id="paintInteriorDoorsToggle" type="checkbox" />
+              <span>Porte intérieure</span>
+              <strong>100 €/porte</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field" data-target="paintInteriorDoorsToggle">
+              <label class="field-label" for="paintInteriorDoorsQuantity">Nombre de portes</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintInteriorDoorsQuantity" type="number" min="0" step="1" inputmode="numeric" value="0" />
+                <span>porte(s)</span>
+              </div>
+            </div>
+
+            <label class="toggle-line">
+              <input id="paintRadiatorsToggle" type="checkbox" />
+              <span>Radiateur</span>
+              <strong>60 €/unité</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field" data-target="paintRadiatorsToggle">
+              <label class="field-label" for="paintRadiatorsQuantity">Nombre de radiateurs</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintRadiatorsQuantity" type="number" min="0" step="1" inputmode="numeric" value="0" />
+                <span>unité(s)</span>
+              </div>
+            </div>
+
+            <label class="toggle-line">
+              <input id="paintBaseboardsToggle" type="checkbox" />
+              <span>Plinthes</span>
+              <strong>8 €/ml</strong>
+            </label>
+            <div class="option-surface-field paint-surface-field" data-target="paintBaseboardsToggle">
+              <label class="field-label" for="paintBaseboardsLength">Longueur de plinthes</label>
+              <div class="input-with-unit compact-unit">
+                <input id="paintBaseboardsLength" type="number" min="0" step="0.1" inputmode="decimal" value="0" />
+                <span>ml</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="estimator-section">
+            <div class="section-heading">
+              <span>9</span>
               <h2>Fournitures</h2>
             </div>
             <div class="choice-grid" role="radiogroup" aria-label="Fournitures peinture">
@@ -818,7 +863,7 @@
 
           <section class="estimator-section">
             <div class="section-heading">
-              <span>9</span>
+              <span>10</span>
               <h2>Frais</h2>
             </div>
             <label class="field-label" for="paintTravelCost">Déplacement</label>
@@ -835,7 +880,7 @@
 
           <section class="estimator-section">
             <div class="section-heading">
-              <span>10</span>
+              <span>11</span>
               <h2>Marge d'imprévu</h2>
             </div>
             <div class="choice-grid margin-grid" role="radiogroup" aria-label="Marge d'imprévu peinture">

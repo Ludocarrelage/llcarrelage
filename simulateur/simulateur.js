@@ -140,7 +140,10 @@
     peintureMurs: { label: "Peinture murs - 2 couches", rate: 20, unit: "m²" },
     peinturePlafond: { label: "Peinture plafond - 2 couches", rate: 25, unit: "m²" },
     packMurs: { label: "Ratissage + primaire + peinture murs", rate: 38, unit: "m²" },
-    packPlafond: { label: "Ratissage + primaire + peinture plafond", rate: 48, unit: "m²" }
+    packPlafond: { label: "Ratissage + primaire + peinture plafond", rate: 48, unit: "m²" },
+    interiorDoors: { label: "Porte intérieure", rate: 100, unit: "porte" },
+    radiators: { label: "Radiateur", rate: 60, unit: "unité" },
+    baseboards: { label: "Plinthes", rate: 8, unit: "ml" }
   };
 
   const paintingSurfaceLabels = {
@@ -161,6 +164,8 @@
   };
 
   const paintingDefaultTask = { enabled: false, surface: 0 };
+  const paintingDefaultQuantityTask = { enabled: false, quantity: 0 };
+  const paintingDefaultLengthTask = { enabled: false, length: 0 };
 
   const paintingDefaultState = {
     surfaceType: "walls",
@@ -178,6 +183,9 @@
     ceilingPaint: { ...paintingDefaultTask },
     wallPack: { ...paintingDefaultTask },
     ceilingPack: { ...paintingDefaultTask },
+    interiorDoors: { ...paintingDefaultQuantityTask },
+    radiators: { ...paintingDefaultQuantityTask },
+    baseboards: { ...paintingDefaultLengthTask },
     suppliesType: "client",
     suppliesEstimate: 0,
     travelCost: 0,
@@ -360,6 +368,11 @@
     return `${label} - ${formatQuantity(surface)} m² x ${rate} €/m²`;
   }
 
+  function buildQuantityLine(label, quantity, singularUnit, pluralUnit, rate, rateUnit) {
+    const unit = quantity > 1 ? pluralUnit : singularUnit;
+    return `${label} - ${formatQuantity(quantity)} ${unit} x ${rate} €/${rateUnit}`;
+  }
+
   function calculateEstimate(inputState) {
     const state = normalizeState(inputState);
     const project = projectRates[state.projectType] || projectRates.interior;
@@ -526,6 +539,20 @@
     };
   }
 
+  function normalizePaintingQuantityTask(task) {
+    return {
+      enabled: Boolean(task && task.enabled),
+      quantity: Math.floor(numberValue(task && task.quantity))
+    };
+  }
+
+  function normalizePaintingLengthTask(task) {
+    return {
+      enabled: Boolean(task && task.enabled),
+      length: numberValue(task && task.length)
+    };
+  }
+
   function normalizePaintingState(inputState) {
     const source = inputState || {};
     const surfaceType = Object.keys(paintingSurfaceLabels).includes(source.surfaceType)
@@ -548,6 +575,9 @@
       ceilingPaint: normalizePaintingTask(source.ceilingPaint),
       wallPack: normalizePaintingTask(source.wallPack),
       ceilingPack: normalizePaintingTask(source.ceilingPack),
+      interiorDoors: normalizePaintingQuantityTask(source.interiorDoors),
+      radiators: normalizePaintingQuantityTask(source.radiators),
+      baseboards: normalizePaintingLengthTask(source.baseboards),
       suppliesType: Object.keys(paintingSuppliesLabels).includes(source.suppliesType) ? source.suppliesType : "client",
       suppliesEstimate: numberValue(source.suppliesEstimate),
       travelCost: numberValue(source.travelCost),
@@ -599,6 +629,22 @@
     return amount;
   }
 
+  function addPaintingQuantityLine(lines, task, rate, valueKey, singularUnit, pluralUnit) {
+    if (!task.enabled || task[valueKey] <= 0) {
+      return 0;
+    }
+
+    const amount = lineAmount(task[valueKey], rate.rate);
+    addLine(
+      lines,
+      buildQuantityLine(rate.label, task[valueKey], singularUnit, pluralUnit, rate.rate, rate.unit),
+      amount,
+      true
+    );
+
+    return amount;
+  }
+
   function warnIfPaintingPackAboveMain(warnings, packLabel, packTask, mainSurface) {
     if (packTask.enabled && mainSurface > 0 && packTask.surface > mainSurface) {
       addWarning(warnings, `Attention : la surface du pack ${packLabel} est supérieure à la surface totale.`);
@@ -625,6 +671,9 @@
     laborSubtotal += addPaintingSurfaceLineOutsidePack(lines, warnings, state.ceilingPrimer, paintingRates.primaire, state.ceilingSurface, hasCeiling, state.ceilingPack);
     laborSubtotal += addPaintingSurfaceLineOutsidePack(lines, warnings, state.wallPaint, paintingRates.peintureMurs, state.wallsSurface, hasWalls, state.wallPack);
     laborSubtotal += addPaintingSurfaceLineOutsidePack(lines, warnings, state.ceilingPaint, paintingRates.peinturePlafond, state.ceilingSurface, hasCeiling, state.ceilingPack);
+    laborSubtotal += addPaintingQuantityLine(lines, state.interiorDoors, paintingRates.interiorDoors, "quantity", "porte", "portes");
+    laborSubtotal += addPaintingQuantityLine(lines, state.radiators, paintingRates.radiators, "quantity", "unité", "unités");
+    laborSubtotal += addPaintingQuantityLine(lines, state.baseboards, paintingRates.baseboards, "length", "ml", "ml");
 
     warnIfPaintingPackAboveMain(warnings, "murs", state.wallPack, state.wallsSurface);
     warnIfPaintingPackAboveMain(warnings, "plafond", state.ceilingPack, state.ceilingSurface);
@@ -903,6 +952,20 @@
     };
   }
 
+  function readPaintingQuantityTask(toggleId, quantityId) {
+    return {
+      enabled: isChecked(toggleId),
+      quantity: Math.floor(getInputNumber(quantityId))
+    };
+  }
+
+  function readPaintingLengthTask(toggleId, lengthId) {
+    return {
+      enabled: isChecked(toggleId),
+      length: getInputNumber(lengthId)
+    };
+  }
+
   function readPaintingState() {
     return {
       surfaceType: getCheckedRadio("paintSurfaceType") || "walls",
@@ -920,6 +983,9 @@
       ceilingPaint: readPaintingTask("paintCeilingPaintToggle", "paintCeilingPaintSurface"),
       wallPack: readPaintingTask("paintWallPackToggle", "paintWallPackSurface"),
       ceilingPack: readPaintingTask("paintCeilingPackToggle", "paintCeilingPackSurface"),
+      interiorDoors: readPaintingQuantityTask("paintInteriorDoorsToggle", "paintInteriorDoorsQuantity"),
+      radiators: readPaintingQuantityTask("paintRadiatorsToggle", "paintRadiatorsQuantity"),
+      baseboards: readPaintingLengthTask("paintBaseboardsToggle", "paintBaseboardsLength"),
       suppliesType: getCheckedRadio("paintSuppliesType") || "client",
       suppliesEstimate: getInputNumber("paintSuppliesEstimate"),
       travelCost: getInputNumber("paintTravelCost"),

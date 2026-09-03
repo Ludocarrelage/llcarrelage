@@ -51,6 +51,9 @@ function painting(overrides) {
     ceilingPaint: { enabled: false, surface: 0 },
     wallPack: { enabled: false, surface: 0 },
     ceilingPack: { enabled: false, surface: 0 },
+    interiorDoors: { enabled: false, quantity: 0 },
+    radiators: { enabled: false, quantity: 0 },
+    baseboards: { enabled: false, length: 0 },
     suppliesType: "client",
     suppliesEstimate: 0,
     travelCost: 0,
@@ -117,7 +120,10 @@ assert.deepStrictEqual(Object.fromEntries(Object.entries(paintingRates).map(([ke
   peintureMurs: 20,
   peinturePlafond: 25,
   packMurs: 38,
-  packPlafond: 48
+  packPlafond: 48,
+  interiorDoors: 100,
+  radiators: 60,
+  baseboards: 8
 });
 
 let result = estimate();
@@ -335,6 +341,52 @@ result = painting({
 });
 assert.strictEqual(result.laborAmount, 1580);
 assert(result.detailLines.some((line) => line.label.includes("Rebouchage localisé - 10 m² x 6 €/m²")));
+
+result = painting({
+  interiorDoors: { enabled: true, quantity: 1 }
+});
+assert.strictEqual(result.laborAmount, 100);
+assert(result.detailLines.some((line) => line.label.includes("Porte intérieure - 1 porte x 100 €/porte")));
+
+result = painting({
+  interiorDoors: { enabled: true, quantity: 3 }
+});
+assert.strictEqual(result.laborAmount, 300);
+assert(result.detailLines.some((line) => line.label.includes("Porte intérieure - 3 portes x 100 €/porte")));
+
+result = painting({
+  radiators: { enabled: true, quantity: 2 }
+});
+assert.strictEqual(result.laborAmount, 120);
+assert(result.detailLines.some((line) => line.label.includes("Radiateur - 2 unités x 60 €/unité")));
+
+result = painting({
+  baseboards: { enabled: true, length: 15 }
+});
+assert.strictEqual(result.laborAmount, 120);
+assert(result.detailLines.some((line) => line.label.includes("Plinthes - 15 ml x 8 €/ml")));
+
+result = painting({
+  interiorDoors: { enabled: true, quantity: 2 },
+  radiators: { enabled: true, quantity: 2 },
+  baseboards: { enabled: true, length: 15 }
+});
+assert.strictEqual(result.laborAmount, 440);
+
+result = painting({
+  surfaceType: "walls",
+  wallsSurface: 40,
+  wallPack: { enabled: true, surface: 40 },
+  interiorDoors: { enabled: true, quantity: 2 }
+});
+assert.strictEqual(result.laborAmount, 1720);
+
+result = painting({
+  interiorDoors: { enabled: false, quantity: 2 },
+  radiators: { enabled: false, quantity: 2 },
+  baseboards: { enabled: false, length: 15 }
+});
+assert.strictEqual(result.laborAmount, 0);
 
 result = painting({
   surfaceType: "walls",
