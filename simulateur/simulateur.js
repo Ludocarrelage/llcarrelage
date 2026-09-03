@@ -89,13 +89,29 @@
   };
 
   const formatRates = {
-    standard: { label: "Standard — jusqu'à 60 × 60", rate: 0 },
-    small: { label: "Petit format — jusqu'à 30 × 30", rate: 5 },
-    large: { label: "Grand format — 80 × 80 / 60 × 120", rate: 10 },
-    veryLarge: { label: "Très grand format — 90 × 90 à 100 × 100", rate: 12 },
-    large120: { label: "Très grand format — 120 × 120", rate: 15 },
-    xxl: { label: "XXL — supérieur à 120 cm", rate: 20 },
-    mosaic: { label: "Mosaïque / très petit format", rate: 15 }
+    verySmall: { label: "Très petit format", notch: "3 mm", bonding: "Simple encollage", rate: 10 },
+    small: { label: "Petit format", notch: "4 mm", bonding: "Simple encollage", rate: 5 },
+    intermediate: {
+      label: "Format intermédiaire",
+      notch: "6 mm",
+      bonding: "Simple ou double encollage selon le chantier",
+      rate: 3
+    },
+    standard: { label: "Format standard", notch: "8 mm", bonding: "Double encollage", rate: 0 },
+    largeStandard: { label: "Grand format standard", notch: "10 mm", bonding: "Double encollage", rate: 0 },
+    large: { label: "Grand format", notch: "12 mm", bonding: "Double encollage obligatoire", rate: 10 },
+    veryLarge: {
+      label: "Très grand format",
+      notch: "Grand format / à adapter",
+      bonding: "Double encollage obligatoire",
+      rate: 15
+    },
+    xxl: {
+      label: "Dalle XXL",
+      notch: "À adapter au support et au fabricant",
+      bonding: "Double encollage obligatoire",
+      rate: 20
+    }
   };
 
   const supportRates = {
@@ -206,7 +222,8 @@
   const defaultState = {
     projectType: "interior",
     quantity: 0,
-    tileFormat: "standard",
+    tileLengthCm: 0,
+    tileWidthCm: 0,
     supports: ["standard"],
     supportSurface: 0,
     removal: "none",
@@ -295,6 +312,60 @@
     return String(Math.round(safeValue * 10) / 10);
   }
 
+  function getTileFormatInfo(lengthCm, widthCm) {
+    const length = numberValue(lengthCm);
+    const width = numberValue(widthCm);
+    const emptyFormat = {
+      key: "",
+      areaCm2: 0,
+      category: "",
+      notch: "",
+      bonding: "",
+      rate: 0,
+      hasDimensions: false,
+      lengthCm: length,
+      widthCm: width
+    };
+
+    if (length <= 0 || width <= 0) {
+      return emptyFormat;
+    }
+
+    const areaCm2 = length * width;
+    let key = "";
+
+    if (length > 160 || width > 160) {
+      key = "xxl";
+    } else if (areaCm2 < 50) {
+      key = "verySmall";
+    } else if (areaCm2 <= 300) {
+      key = "small";
+    } else if (areaCm2 <= 1200) {
+      key = "intermediate";
+    } else if (areaCm2 <= 2200) {
+      key = "standard";
+    } else if (areaCm2 <= 3600) {
+      key = "largeStandard";
+    } else if (areaCm2 <= 10000) {
+      key = "large";
+    } else {
+      key = "veryLarge";
+    }
+
+    const format = formatRates[key];
+    return {
+      key,
+      areaCm2,
+      category: format.label,
+      notch: format.notch,
+      bonding: format.bonding,
+      rate: format.rate,
+      hasDimensions: true,
+      lengthCm: length,
+      widthCm: width
+    };
+  }
+
   function normalizeList(values, allowedKeys, fallback) {
     const keys = Array.isArray(values) ? values : [fallback];
     const filtered = keys.filter((key) => allowedKeys.includes(key));
@@ -309,7 +380,8 @@
     };
 
     merged.quantity = numberValue(merged.quantity);
-    merged.tileFormat = Object.keys(formatRates).includes(merged.tileFormat) ? merged.tileFormat : "standard";
+    merged.tileLengthCm = numberValue(merged.tileLengthCm);
+    merged.tileWidthCm = numberValue(merged.tileWidthCm);
     merged.supports = normalizeList(merged.supports, Object.keys(supportRates), "standard");
     if (merged.supports.some((support) => support !== "standard")) {
       merged.supports = merged.supports.filter((support) => support !== "standard");
@@ -386,6 +458,7 @@
     const isBrokenTiles = project.kind === "brokenTiles";
     const unit = project.unitLabel;
     const quantity = isBrokenTiles ? Math.floor(state.quantity) : state.quantity;
+    const tileFormatInfo = getTileFormatInfo(state.tileLengthCm, state.tileWidthCm);
     const lines = [];
     const warnings = [];
 
@@ -407,10 +480,16 @@
         addLine(lines, "Minimum remplacement de carreaux", minimumForRepair, false);
       }
     } else if (isClassic) {
-      const format = formatRates[state.tileFormat] || formatRates.standard;
-      const formatAmount = lineAmount(quantity, format.rate);
-      addLine(lines, `${format.label} - ${formatQuantity(quantity)} ${unit} x ${format.rate} €/${unit}`, formatAmount, false);
-      laborSubtotal += formatAmount;
+      if (tileFormatInfo.hasDimensions) {
+        const formatAmount = lineAmount(quantity, tileFormatInfo.rate);
+        addLine(
+          lines,
+          `Format : ${tileFormatInfo.category} (${formatQuantity(tileFormatInfo.lengthCm)} × ${formatQuantity(tileFormatInfo.widthCm)} cm) - ${formatQuantity(quantity)} ${unit} x ${tileFormatInfo.rate} €/${unit}`,
+          formatAmount,
+          false
+        );
+        laborSubtotal += formatAmount;
+      }
 
       state.supports.forEach((supportKey) => {
         if (supportKey === "standard") return;
@@ -558,6 +637,7 @@
       total: roundedTotal,
       low: roundEuro(roundedTotal * 0.95),
       high: roundEuro(roundedTotal * 1.1),
+      tileFormatInfo,
       detailLines: lines,
       warningLines: warnings
     };
@@ -808,6 +888,7 @@
     module.exports = {
       calculateEstimate,
       calculatePaintingEstimate,
+      getTileFormatInfo,
       calculateProfitability,
       projectRates,
       paintingRates,
@@ -829,6 +910,7 @@
   const quantityLabel = document.getElementById("quantityLabel");
   const quantityInput = document.getElementById("quantityInput");
   const quantityUnit = document.getElementById("quantityUnit");
+  const tileFormatSummary = document.getElementById("tileFormatSummary");
   const detailList = document.getElementById("detailList");
   const warningBox = document.getElementById("estimateWarnings");
   const warningList = document.getElementById("warningList");
@@ -878,7 +960,8 @@
     return {
       projectType: projectSelect.value,
       quantity: getInputNumber("quantityInput"),
-      tileFormat: getCheckedRadio("tileFormat") || "standard",
+      tileLengthCm: getInputNumber("tileLengthCm"),
+      tileWidthCm: getInputNumber("tileWidthCm"),
       supports: getCheckedValues(["supportStandard", "supportOldTiles", "supportWood", "supportUnknown", "supportNotFlat"]),
       supportSurface: getInputNumber("supportSurface"),
       removal: getCheckedRadio("removal") || "none",
@@ -918,6 +1001,42 @@
     if (element) {
       element.textContent = value;
     }
+  }
+
+  function formatAreaCm2(value) {
+    const rounded = Math.round(numberValue(value) * 10) / 10;
+    return `${new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 1 }).format(rounded)} cm²`;
+  }
+
+  function formatFormatRate(rate) {
+    const safeRate = numberValue(rate);
+    return safeRate > 0 ? `+${formatQuantity(safeRate)} €/m²` : "0 €/m²";
+  }
+
+  function renderTileFormatInfo(info, projectKind) {
+    if (!tileFormatSummary) return;
+
+    tileFormatSummary.classList.toggle("is-empty", !info.hasDimensions);
+
+    if (!info.hasDimensions) {
+      setText("tileFormatCategory", "-");
+      setText("tileAreaCm2", "-");
+      setText("tileNotch", "-");
+      setText("tileBonding", "-");
+      setText("tileFormatRate", "0 €/m²");
+      return;
+    }
+
+    const rateText =
+      projectKind === "brokenTiles" && info.rate > 0
+        ? `${formatFormatRate(info.rate)} indicatif, non appliqué automatiquement`
+        : formatFormatRate(info.rate);
+
+    setText("tileFormatCategory", info.category);
+    setText("tileAreaCm2", formatAreaCm2(info.areaCm2));
+    setText("tileNotch", info.notch);
+    setText("tileBonding", info.bonding);
+    setText("tileFormatRate", rateText);
   }
 
   function renderDetails(lines) {
@@ -1316,6 +1435,7 @@
     setText("suppliesAmount", formatCurrency(lastCalculation.suppliesAmount));
     setText("feesAmount", formatCurrency(lastCalculation.feesAmount));
     setText("marginAmount", formatCurrency(lastCalculation.marginAmount));
+    renderTileFormatInfo(lastCalculation.tileFormatInfo, lastCalculation.project.kind);
     renderWarnings(lastCalculation.warningLines);
     renderDetails(lastCalculation.detailLines);
     renderProfitability(profitability);
@@ -1628,6 +1748,7 @@
     calculateEstimate,
     calculatePaintingEstimate,
     calculateProfitability,
+    getTileFormatInfo,
     readPaintingState,
     readState,
     setEstimatorMode,

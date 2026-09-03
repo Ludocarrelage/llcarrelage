@@ -3,6 +3,7 @@ const assert = require("assert");
 const {
   calculateEstimate,
   calculatePaintingEstimate,
+  getTileFormatInfo,
   calculateProfitability,
   projectRates,
   paintingRates,
@@ -18,7 +19,8 @@ function estimate(overrides) {
   return calculateEstimate({
     projectType: "interior",
     quantity: 40,
-    tileFormat: "standard",
+    tileLengthCm: 0,
+    tileWidthCm: 0,
     supports: ["standard"],
     removal: "none",
     removalSurface: 0,
@@ -80,13 +82,14 @@ assert.deepStrictEqual(
   }
 );
 assert.deepStrictEqual(Object.fromEntries(Object.entries(formatRates).map(([key, item]) => [key, item.rate])), {
-  standard: 0,
+  verySmall: 10,
   small: 5,
+  intermediate: 3,
+  standard: 0,
+  largeStandard: 0,
   large: 10,
-  veryLarge: 12,
-  large120: 15,
-  xxl: 20,
-  mosaic: 15
+  veryLarge: 15,
+  xxl: 20
 });
 assert.deepStrictEqual(Object.fromEntries(Object.entries(supportRates).map(([key, item]) => [key, item.rate])), {
   standard: 0,
@@ -149,7 +152,8 @@ assert.strictEqual(result.total, 1200);
   const projectResult = calculateEstimate({
     projectType,
     quantity,
-    tileFormat: "standard",
+    tileLengthCm: 0,
+    tileWidthCm: 0,
     supports: ["standard"],
     removal: "none",
     prep: ["none"],
@@ -163,23 +167,116 @@ assert.strictEqual(result.total, 1200);
   assert(Number.isFinite(projectResult.total), projectType);
 });
 
+function assertTileFormat(lengthCm, widthCm, expected) {
+  const info = getTileFormatInfo(lengthCm, widthCm);
+  Object.entries(expected).forEach(([key, value]) => {
+    assert.strictEqual(info[key], value, `${lengthCm} x ${widthCm} - ${key}`);
+  });
+  assert(Number.isFinite(info.areaCm2), `${lengthCm} x ${widthCm} - finite area`);
+  return info;
+}
+
+assertTileFormat(5, 5, {
+  areaCm2: 25,
+  category: "Très petit format",
+  notch: "3 mm",
+  bonding: "Simple encollage",
+  rate: 10
+});
+assertTileFormat(10, 10, {
+  areaCm2: 100,
+  category: "Petit format",
+  notch: "4 mm",
+  bonding: "Simple encollage",
+  rate: 5
+});
+assertTileFormat(30, 30, {
+  areaCm2: 900,
+  category: "Format intermédiaire",
+  notch: "6 mm",
+  bonding: "Simple ou double encollage selon le chantier",
+  rate: 3
+});
+assertTileFormat(30, 60, {
+  areaCm2: 1800,
+  category: "Format standard",
+  notch: "8 mm",
+  bonding: "Double encollage",
+  rate: 0
+});
+assertTileFormat(60, 60, {
+  areaCm2: 3600,
+  category: "Grand format standard",
+  notch: "10 mm",
+  bonding: "Double encollage",
+  rate: 0
+});
+assertTileFormat(80, 80, {
+  areaCm2: 6400,
+  category: "Grand format",
+  notch: "12 mm",
+  bonding: "Double encollage obligatoire",
+  rate: 10
+});
+assertTileFormat(100, 100, {
+  areaCm2: 10000,
+  category: "Grand format",
+  notch: "12 mm",
+  bonding: "Double encollage obligatoire",
+  rate: 10
+});
+assertTileFormat(120, 120, {
+  areaCm2: 14400,
+  category: "Très grand format",
+  bonding: "Double encollage obligatoire",
+  rate: 15
+});
+assertTileFormat(120, 240, {
+  category: "Dalle XXL",
+  bonding: "Double encollage obligatoire",
+  rate: 20
+});
+
 [
-  ["standard", 1200],
-  ["small", 1400],
-  ["large", 1600],
-  ["veryLarge", 1680],
-  ["large120", 1800],
-  ["xxl", 2000],
-  ["mosaic", 1800]
-].forEach(([tileFormat, expectedLabor]) => {
-  const formatResult = estimate({ tileFormat });
-  assert.strictEqual(formatResult.laborAmount, expectedLabor, tileFormat);
+  [7, 7, "verySmall"],
+  [5, 10, "small"],
+  [10, 30, "small"],
+  [10, 30.1, "intermediate"],
+  [30, 40, "intermediate"],
+  [30, 40.1, "standard"],
+  [44, 50, "standard"],
+  [44.1, 50, "largeStandard"],
+  [60, 60, "largeStandard"],
+  [60.1, 60, "large"],
+  [100, 100, "large"],
+  [100.1, 100, "veryLarge"],
+  [160, 70, "veryLarge"],
+  [160.1, 10, "xxl"]
+].forEach(([lengthCm, widthCm, expectedKey]) => {
+  const info = getTileFormatInfo(lengthCm, widthCm);
+  assert.strictEqual(info.key, expectedKey, `${lengthCm} x ${widthCm}`);
+});
+
+["", 0, -1, "abc"].forEach((badValue) => {
+  const info = getTileFormatInfo(badValue, 60);
+  assert.strictEqual(info.hasDimensions, false, `invalid length ${badValue}`);
+  assert.strictEqual(info.rate, 0, `invalid length rate ${badValue}`);
+  assert(Number.isFinite(info.areaCm2), `invalid length finite area ${badValue}`);
+});
+
+[
+  [60, 60, 1200],
+  [80, 80, 1600],
+  [120, 120, 1800],
+  [120, 240, 2000]
+].forEach(([tileLengthCm, tileWidthCm, expectedLabor]) => {
+  const formatResult = estimate({ tileLengthCm, tileWidthCm });
+  assert.strictEqual(formatResult.laborAmount, expectedLabor, `${tileLengthCm} x ${tileWidthCm}`);
 });
 
 result = calculateEstimate({
   projectType: "brokenTiles",
   quantity: 3,
-  tileFormat: "standard",
   supports: ["standard"],
   removal: "none",
   prep: ["none"],
@@ -194,7 +291,6 @@ assert.strictEqual(result.laborAmount, 120);
 result = calculateEstimate({
   projectType: "brokenTiles",
   quantity: 3,
-  tileFormat: "standard",
   supports: ["standard"],
   removal: "none",
   prep: ["sanding"],
@@ -211,7 +307,6 @@ assert(result.detailLines.some((line) => line.label.includes("Ponçage / nettoya
 result = calculateEstimate({
   projectType: "brokenTiles",
   quantity: 2,
-  tileFormat: "standard",
   supports: ["standard"],
   removal: "none",
   prep: ["primer"],
@@ -228,7 +323,6 @@ assert(result.detailLines.some((line) => line.label.includes("Primaire d'accroch
 result = calculateEstimate({
   projectType: "brokenTiles",
   quantity: 4,
-  tileFormat: "standard",
   supports: ["standard"],
   removal: "none",
   prep: ["sanding", "primer"],
@@ -246,7 +340,6 @@ assert.strictEqual(result.laborAmount, 200);
 result = calculateEstimate({
   projectType: "brokenTiles",
   quantity: 2,
-  tileFormat: "standard",
   supports: ["standard"],
   removal: "none",
   prep: ["none"],
@@ -268,7 +361,8 @@ assert.strictEqual(result.laborAmount, 80);
 result = calculateEstimate({
   projectType: "brokenTiles",
   quantity: 3,
-  tileFormat: "xxl",
+  tileLengthCm: 120,
+  tileWidthCm: 240,
   supports: ["notFlat"],
   removal: "none",
   prep: ["none"],
@@ -279,13 +373,12 @@ result = calculateEstimate({
   otherCost: 0
 });
 assert.strictEqual(result.laborAmount, 120);
-assert(!result.detailLines.some((line) => line.label.includes("XXL")));
+assert(!result.detailLines.some((line) => line.label.includes("Dalle XXL")));
 assert(!result.detailLines.some((line) => line.label.includes("3 carreau x 12")));
 
 result = calculateEstimate({
   projectType: "brokenTiles",
   quantity: 3,
-  tileFormat: "standard",
   supports: ["notFlat"],
   supportSurface: 2,
   removal: "none",
@@ -302,7 +395,6 @@ assert(result.detailLines.some((line) => line.label.includes("Sol ou mur pas pla
 result = calculateEstimate({
   projectType: "brokenTiles",
   quantity: 3,
-  tileFormat: "standard",
   supports: ["standard"],
   removal: "tiles",
   removalSurface: 2,
@@ -319,7 +411,6 @@ assert(result.detailLines.some((line) => line.label.includes("Dépose carrelage 
 result = calculateEstimate({
   projectType: "brokenTiles",
   quantity: 2,
-  tileFormat: "standard",
   supports: ["standard"],
   removal: "none",
   prep: ["none"],
