@@ -89,10 +89,13 @@
   };
 
   const formatRates = {
-    none: { label: "Aucun supplément format", rate: 0 },
-    small: { label: "Petit format", rate: 5 },
-    large80: { label: "80 x 80", rate: 10 },
-    large120: { label: "120 x 120", rate: 15 }
+    standard: { label: "Standard — jusqu'à 60 × 60", rate: 0 },
+    small: { label: "Petit format — jusqu'à 30 × 30", rate: 5 },
+    large: { label: "Grand format — 80 × 80 / 60 × 120", rate: 10 },
+    veryLarge: { label: "Très grand format — 90 × 90 à 100 × 100", rate: 12 },
+    large120: { label: "Très grand format — 120 × 120", rate: 15 },
+    xxl: { label: "XXL — supérieur à 120 cm", rate: 20 },
+    mosaic: { label: "Mosaïque / très petit format", rate: 15 }
   };
 
   const supportRates = {
@@ -203,7 +206,7 @@
   const defaultState = {
     projectType: "interior",
     quantity: 0,
-    tileFormat: "none",
+    tileFormat: "standard",
     supports: ["standard"],
     removal: "none",
     removalSurface: 0,
@@ -305,6 +308,7 @@
     };
 
     merged.quantity = numberValue(merged.quantity);
+    merged.tileFormat = Object.keys(formatRates).includes(merged.tileFormat) ? merged.tileFormat : "standard";
     merged.supports = normalizeList(merged.supports, Object.keys(supportRates), "standard");
     if (merged.supports.some((support) => support !== "standard")) {
       merged.supports = merged.supports.filter((support) => support !== "standard");
@@ -401,7 +405,7 @@
         addLine(lines, "Minimum remplacement de carreaux", minimumForRepair, false);
       }
     } else if (isClassic) {
-      const format = formatRates[state.tileFormat] || formatRates.none;
+      const format = formatRates[state.tileFormat] || formatRates.standard;
       const formatAmount = lineAmount(quantity, format.rate);
       addLine(lines, `${format.label} - ${formatQuantity(quantity)} ${unit} x ${format.rate} €/${unit}`, formatAmount, false);
       laborSubtotal += formatAmount;
@@ -846,7 +850,7 @@
     return {
       projectType: projectSelect.value,
       quantity: getInputNumber("quantityInput"),
-      tileFormat: getCheckedRadio("tileFormat") || "none",
+      tileFormat: getCheckedRadio("tileFormat") || "standard",
       supports: getCheckedValues(["supportStandard", "supportOldTiles", "supportWood", "supportUnknown", "supportNotFlat"]),
       removal: getCheckedRadio("removal") || "none",
       removalSurface: getInputNumber("removalSurface"),

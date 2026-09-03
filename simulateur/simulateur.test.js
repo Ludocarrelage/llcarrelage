@@ -18,7 +18,7 @@ function estimate(overrides) {
   return calculateEstimate({
     projectType: "interior",
     quantity: 40,
-    tileFormat: "none",
+    tileFormat: "standard",
     supports: ["standard"],
     removal: "none",
     removalSurface: 0,
@@ -80,10 +80,13 @@ assert.deepStrictEqual(
   }
 );
 assert.deepStrictEqual(Object.fromEntries(Object.entries(formatRates).map(([key, item]) => [key, item.rate])), {
-  none: 0,
+  standard: 0,
   small: 5,
-  large80: 10,
-  large120: 15
+  large: 10,
+  veryLarge: 12,
+  large120: 15,
+  xxl: 20,
+  mosaic: 15
 });
 assert.deepStrictEqual(Object.fromEntries(Object.entries(supportRates).map(([key, item]) => [key, item.rate])), {
   standard: 0,
@@ -146,7 +149,7 @@ assert.strictEqual(result.total, 1200);
   const projectResult = calculateEstimate({
     projectType,
     quantity,
-    tileFormat: "none",
+    tileFormat: "standard",
     supports: ["standard"],
     removal: "none",
     prep: ["none"],
@@ -158,6 +161,19 @@ assert.strictEqual(result.total, 1200);
   });
   assert.strictEqual(projectResult.baseAmount, expectedBase, projectType);
   assert(Number.isFinite(projectResult.total), projectType);
+});
+
+[
+  ["standard", 1200],
+  ["small", 1400],
+  ["large", 1600],
+  ["veryLarge", 1680],
+  ["large120", 1800],
+  ["xxl", 2000],
+  ["mosaic", 1800]
+].forEach(([tileFormat, expectedLabor]) => {
+  const formatResult = estimate({ tileFormat });
+  assert.strictEqual(formatResult.laborAmount, expectedLabor, tileFormat);
 });
 
 result = estimate({ removal: "tiles", removalSurface: 25 });

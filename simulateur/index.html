@@ -10,7 +10,7 @@
   <title>Estimation rapide chantier | LL Carrelage</title>
   <link rel="icon" type="image/jpeg" href="/logo-ll-carrelage.jpg" />
   <link rel="stylesheet" href="/simulateur/style.css?v=20260902-1" />
-  <script src="/simulateur/simulateur.js?v=20260902-3" defer></script>
+  <script src="/simulateur/simulateur.js?v=20260903-1" defer></script>
 </head>
 <body>
   <main class="estimator-shell" id="simulateur-prive">
@@ -82,23 +82,38 @@
           </div>
           <div class="choice-grid" role="radiogroup" aria-label="Format du carrelage">
             <label class="option-card">
-              <input type="radio" name="tileFormat" value="none" checked />
-              <span class="option-title">Aucun supplément</span>
+              <input type="radio" name="tileFormat" value="standard" checked />
+              <span class="option-title">Standard — jusqu'à 60 × 60</span>
               <span class="option-price">0 €/m²</span>
             </label>
             <label class="option-card">
               <input type="radio" name="tileFormat" value="small" />
-              <span class="option-title">Petit format</span>
+              <span class="option-title">Petit format — jusqu'à 30 × 30</span>
               <span class="option-price">+5 €/m²</span>
             </label>
             <label class="option-card">
-              <input type="radio" name="tileFormat" value="large80" />
-              <span class="option-title">80 x 80</span>
+              <input type="radio" name="tileFormat" value="large" />
+              <span class="option-title">Grand format — 80 × 80 / 60 × 120</span>
               <span class="option-price">+10 €/m²</span>
             </label>
             <label class="option-card">
+              <input type="radio" name="tileFormat" value="veryLarge" />
+              <span class="option-title">Très grand format — 90 × 90 à 100 × 100</span>
+              <span class="option-price">+12 €/m²</span>
+            </label>
+            <label class="option-card">
               <input type="radio" name="tileFormat" value="large120" />
-              <span class="option-title">120 x 120</span>
+              <span class="option-title">Très grand format — 120 × 120</span>
+              <span class="option-price">+15 €/m²</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="tileFormat" value="xxl" />
+              <span class="option-title">XXL — supérieur à 120 cm</span>
+              <span class="option-price">+20 €/m²</span>
+            </label>
+            <label class="option-card">
+              <input type="radio" name="tileFormat" value="mosaic" />
+              <span class="option-title">Mosaïque / très petit format</span>
               <span class="option-price">+15 €/m²</span>
             </label>
           </div>
