@@ -1,6 +1,6 @@
 # LL Carrelage
 
-Site vitrine de LL Carrelage, artisan carreleur intervenant principalement en Isère et dans le Rhône.
+Site vitrine de LL Carrelage, artisan carreleur intervenant à Villeneuve-Saint-Denis (77174) et dans un rayon d'environ 30 km.
 
 Le site présente les prestations, la zone d'intervention, des réalisations, une FAQ, un formulaire de contact WhatsApp et un calculateur de devis indicatif.
 
@@ -58,4 +58,3 @@ git push origin main
 - Conserver le numéro WhatsApp au format international `33618855886` dans `script.js`.
 - Tester le calculateur après toute modification de tarif ou de champ.
 - Compresser les nouvelles photos avant publication pour garder un chargement rapide.
-

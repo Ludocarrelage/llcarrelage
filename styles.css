@@ -469,10 +469,10 @@ textarea {
   z-index: 2;
 }
 
-.zone-rhone { left: 3%; top: 5%; }
-.marker-lyon { left: 43%; top: 50%; }
-.marker-vienne { left: 45%; top: 76%; }
-.marker-bourgoin { left: 66%; top: 68%; }
+.zone-seine-marne { left: 3%; top: 5%; }
+.marker-villeneuve { left: 49%; top: 49%; }
+.marker-bussy { left: 42%; top: 45%; }
+.marker-crecy { left: 57%; top: 43%; }
 
 .service-area-visual figcaption {
   color: rgba(255, 255, 255, 0.64);

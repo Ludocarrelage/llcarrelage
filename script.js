@@ -159,10 +159,10 @@ const calculatorAdjustments = Object.freeze({
 });
 
 const calculatorWorkshop = Object.freeze({
-  label: "Pont-Évêque",
-  postalCode: "38780",
-  lat: 45.5326,
-  lon: 4.9097,
+  label: "Villeneuve-Saint-Denis",
+  postalCode: "77174",
+  lat: 48.8157213,
+  lon: 2.7937088,
 });
 
 const calculatorTravelSettings = Object.freeze({
@@ -505,7 +505,8 @@ async function geocodeCalculatorCity(city, postalCode) {
         `${cityLabel}, France`,
       ]
     : [
-        `${cityLabel}, Auvergne-Rhône-Alpes, France`,
+        `${cityLabel}, Seine-et-Marne, France`,
+        `${cityLabel}, Île-de-France, France`,
         `${cityLabel}, France`,
       ];
   let firstFrenchFallback = null;
