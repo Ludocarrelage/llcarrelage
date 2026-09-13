@@ -1410,6 +1410,84 @@ textarea {
   line-height: 1;
 }
 
+/* Avis clients : la grille se réorganise en ajoutant des cartes HTML. */
+.customer-reviews .eyebrow {
+  color: var(--ink);
+}
+
+.customer-reviews .section-text {
+  color: var(--muted);
+}
+
+.customer-reviews .reviews-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(calc((100% - 36px) / 3), 1fr));
+}
+
+.customer-reviews .review-card {
+  background: #f2e8dc;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: 0 18px 50px rgba(21, 21, 21, 0.06);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: clamp(24px, 3vw, 30px);
+}
+
+.customer-reviews .review-stars {
+  font-size: 1.3rem;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.customer-reviews blockquote {
+  flex: 1;
+  font-size: 1.05rem;
+  line-height: 1.7;
+  max-width: 65ch;
+  text-wrap: pretty;
+}
+
+.customer-reviews .review-credit {
+  display: grid;
+  gap: 6px;
+}
+
+.customer-reviews .review-credit h3 {
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+.customer-reviews .review-credit p,
+.customer-reviews .review-source {
+  font-size: 0.9rem;
+}
+
+.customer-reviews .review-source {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  justify-self: start;
+  margin-top: 4px;
+  padding: 5px 10px;
+}
+
+@media (max-width: 900px) {
+  .customer-reviews .reviews-grid {
+    grid-template-columns: repeat(auto-fit, minmax(calc((100% - 18px) / 2), 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .customer-reviews .reviews-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .faq-section {
   background: #f7f1ea;
 }
