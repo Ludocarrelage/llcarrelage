@@ -1440,6 +1440,7 @@ textarea {
 }
 
 .customer-reviews .review-stars {
+  color: #947020;
   font-size: 1.3rem;
   letter-spacing: 0.08em;
   line-height: 1;
@@ -3188,4 +3189,15 @@ textarea {
     padding: 12px;
     gap: 6px;
   }
+}
+
+.quote-photos {
+  margin: 6px 0;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+#summaryMessage {
+  white-space: pre-wrap;
 }

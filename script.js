@@ -139,42 +139,6 @@ function closeGallery() {
   galleryLightbox.classList.remove("is-open");
 }
 
-// Tarifs indicatifs faciles à ajuster au même endroit.
-const calculatorBaseRates = Object.freeze({
-  interior: 30,
-  terrace: 35,
-  bathroom: 45,
-  shower: 50,
-  "kitchen-wall": 25,
-  "bathroom-wall": 25,
-  stairs: 50,
-  baseboards: 15,
-});
-
-const calculatorAdjustments = Object.freeze({
-  format: { small: 0, 30: 0, 45: 0, 60: 0, 80: 10, 120: 15, other: 0 },
-  support: { slab: 0, screed: 0, "old-tiles": 6, wood: 15, unknown: 5 },
-  removal: { none: 0, tiles: 15, parquet: 10, pvc: 7, carpet: 7, unknown: 0 },
-  flat: { Oui: 0, Non: 12, "Je ne sais pas": 0 },
-});
-
-const calculatorWorkshop = Object.freeze({
-  label: "Villeneuve-Saint-Denis",
-  postalCode: "77174",
-  lat: 48.8157213,
-  lon: 2.7937088,
-});
-
-const calculatorTravelSettings = Object.freeze({
-  includedKm: 20,
-  pricePerExtraKm: 0.8,
-  cachePrefix: "llcarrelage_travel_distance_",
-  timeoutMs: 6500,
-});
-
-const calculatorTravelCache = new Map();
-const calculatorTravelRequests = new Map();
-
 const calculatorSteps = Array.from(document.querySelectorAll("[data-calc-step]"));
 const calculatorPrevious = document.getElementById("calcPrev");
 const calculatorNext = document.getElementById("calcNext");
@@ -182,9 +146,7 @@ const calculatorSubmit = document.getElementById("calcSubmit");
 const calculatorRestart = document.getElementById("calcRestart");
 const calculatorError = document.getElementById("calcFormError");
 let calculatorStepIndex = 0;
-let calculatorHasEstimate = false;
-let calculatorRecalculationTimer = null;
-let calculatorQuoteRequestId = 0;
+let calculatorHasSummary = false;
 const calculatorInvalidClass = "is-invalid";
 
 function getSelectLabel(id) {
@@ -321,7 +283,7 @@ function animateActiveCalculatorStep() {
   }, 450);
 }
 
-function scrollToEstimatedBudget() {
+function scrollToProjectSummary() {
   window.setTimeout(() => {
     const quoteContent = document.getElementById("quoteContent");
 
@@ -329,10 +291,10 @@ function scrollToEstimatedBudget() {
       return;
     }
 
-    const budgetHeading = quoteContent.querySelector(".quote-kicker") || quoteContent.querySelector("h3") || quoteContent;
+    const summaryHeading = quoteContent.querySelector(".quote-kicker") || quoteContent.querySelector("h3") || quoteContent;
     const headerHeight = navbar?.getBoundingClientRect().height || 0;
     const safeOffset = 18;
-    const targetPosition = budgetHeading.getBoundingClientRect().top + window.scrollY - headerHeight - safeOffset;
+    const targetPosition = summaryHeading.getBoundingClientRect().top + window.scrollY - headerHeight - safeOffset;
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     window.scrollTo({
@@ -342,7 +304,7 @@ function scrollToEstimatedBudget() {
   }, 150);
 }
 
-function animateEstimatedBudget() {
+function animateProjectSummary() {
   const quoteContent = document.getElementById("quoteContent");
 
   if (!quoteContent || quoteContent.hidden) {
@@ -358,246 +320,17 @@ function animateEstimatedBudget() {
   }, 500);
 }
 
-const euroFormatter = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2,
-});
-
-const euroCentFormatter = new Intl.NumberFormat("fr-FR", {
-  style: "currency",
-  currency: "EUR",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
-function formatEuros(value) {
-  const amount = Number(value);
-
-  if (!Number.isFinite(amount)) {
-    return "0 €";
-  }
-
-  return Number.isInteger(amount) ? euroFormatter.format(amount) : euroCentFormatter.format(amount);
-}
-
 function getCalculatorProjectUnit(projectKey) {
   return projectKey === "baseboards" ? "ml" : "m²";
 }
 
-function normalizeCalculatorCity(value) {
-  return limitText(value, 80)
-    .toLocaleLowerCase("fr-FR")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function getUnavailableTravelResult() {
-  return {
-    status: "unavailable",
-    distanceKm: null,
-    fee: 0,
-  };
-}
-
-function getTravelDistanceText(travelResult) {
-  if (travelResult?.status === "ok") {
-    return `${travelResult.distanceKm} km depuis ${calculatorWorkshop.label}`;
-  }
-
-  return "Les frais de déplacement seront calculés lors du devis définitif.";
-}
-
-function getTravelFeeText(travelResult) {
-  if (travelResult?.status !== "ok") {
-    return "À confirmer";
-  }
-
-  return travelResult.fee > 0 ? formatEuros(travelResult.fee) : "Offerts";
-}
-
-function readCalculatorTravelCache(cityKey) {
-  if (!cityKey) return null;
-  const memoryValue = calculatorTravelCache.get(cityKey);
-  if (memoryValue) return memoryValue;
-
-  try {
-    const storedValue = sessionStorage.getItem(`${calculatorTravelSettings.cachePrefix}${cityKey}`);
-    if (!storedValue) return null;
-    const parsedValue = JSON.parse(storedValue);
-    calculatorTravelCache.set(cityKey, parsedValue);
-    return parsedValue;
-  } catch (error) {
-    return null;
-  }
-}
-
-function writeCalculatorTravelCache(cityKey, value) {
-  if (!cityKey || !value) return;
-  calculatorTravelCache.set(cityKey, value);
-
-  try {
-    sessionStorage.setItem(`${calculatorTravelSettings.cachePrefix}${cityKey}`, JSON.stringify(value));
-  } catch (error) {
-    // Le cache en mémoire suffit si sessionStorage n'est pas disponible.
-  }
-}
-
-async function fetchCalculatorJson(url) {
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), calculatorTravelSettings.timeoutMs);
-
-  try {
-    const response = await fetch(url, {
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Réponse API invalide : ${response.status}`);
-    }
-
-    return await response.json();
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
-}
-
-function getCalculatorPlaceCoordinates(place) {
-  return {
-    lat: Number(place.lat),
-    lon: Number(place.lon),
-  };
-}
-
-function isFrenchCalculatorPlace(place) {
-  const countryCode = limitText(place?.address?.country_code, 8).toLowerCase();
-  return !countryCode || countryCode === "fr";
-}
-
-function doesCalculatorPlaceMatchPostalCode(place, expectedPostalCode) {
-  const normalizedExpectedPostalCode = limitText(expectedPostalCode, 5);
-  if (!normalizedExpectedPostalCode) return true;
-
-  const postcodes = String(place?.address?.postcode || "")
-    .split(/[;,]/)
-    .map((postcode) => postcode.replace(/\s+/g, "").trim())
-    .filter(Boolean);
-
-  return postcodes.some((postcode) => (
-    postcode === normalizedExpectedPostalCode ||
-    postcode.startsWith(normalizedExpectedPostalCode)
-  ));
-}
-
-async function geocodeCalculatorCity(city, postalCode) {
-  const cityLabel = limitText(city, 80);
-  const expectedPostalCode = limitText(postalCode, 5);
-  const queries = expectedPostalCode
-    ? [
-        `${expectedPostalCode} ${cityLabel}, France`,
-        `${cityLabel} ${expectedPostalCode}, France`,
-        `${expectedPostalCode}, France`,
-        `${cityLabel}, France`,
-      ]
-    : [
-        `${cityLabel}, Seine-et-Marne, France`,
-        `${cityLabel}, Île-de-France, France`,
-        `${cityLabel}, France`,
-      ];
-  let firstFrenchFallback = null;
-
-  for (const query of queries) {
-    const params = new URLSearchParams({
-      q: query,
-      format: "jsonv2",
-      addressdetails: "1",
-      limit: "5",
-      countrycodes: "fr",
-      email: "llcarrelage@outlook.fr",
-    });
-    params.set("accept-language", "fr");
-
-    const results = await fetchCalculatorJson(`https://nominatim.openstreetmap.org/search?${params.toString()}`);
-    const places = Array.isArray(results)
-      ? results.filter((item) => item?.lat && item?.lon && isFrenchCalculatorPlace(item))
-      : [];
-    const matchingPlace = places.find((place) => doesCalculatorPlaceMatchPostalCode(place, expectedPostalCode));
-
-    if (matchingPlace) {
-      return getCalculatorPlaceCoordinates(matchingPlace);
-    }
-
-    if (!firstFrenchFallback && places[0]) firstFrenchFallback = places[0];
-  }
-
-  return firstFrenchFallback ? getCalculatorPlaceCoordinates(firstFrenchFallback) : null;
-}
-
-async function fetchCalculatorRouteDistanceKm(destination) {
-  if (!Number.isFinite(destination?.lat) || !Number.isFinite(destination?.lon)) {
-    throw new Error("Ville introuvable");
-  }
-
-  const routeCoordinates = [
-    `${calculatorWorkshop.lon},${calculatorWorkshop.lat}`,
-    `${destination.lon},${destination.lat}`,
-  ].join(";");
-  const params = new URLSearchParams({
-    overview: "false",
-    steps: "false",
-    alternatives: "false",
-  });
-  const routeData = await fetchCalculatorJson(
-    `https://router.project-osrm.org/route/v1/driving/${routeCoordinates}?${params.toString()}`
-  );
-  const distanceMeters = routeData?.routes?.[0]?.distance;
-
-  if (!Number.isFinite(distanceMeters)) {
-    throw new Error("Itinéraire introuvable");
-  }
-
-  return Math.max(0, Math.round(distanceMeters / 1000));
-}
-
-async function calculateTravelFees(city, postalCode) {
-  const cityLabel = normalizeCalculatorCity(city);
-  const normalizedPostalCode = limitText(postalCode, 5);
-  if (cityLabel.length < 2 || !isValidFrenchPostalCode(normalizedPostalCode)) return getUnavailableTravelResult();
-
-  const cityKey = normalizeCalculatorCity(`${normalizedPostalCode}-${cityLabel}`);
-
-  const cachedValue = readCalculatorTravelCache(cityKey);
-  if (cachedValue) return cachedValue;
-
-  const pendingRequest = calculatorTravelRequests.get(cityKey);
-  if (pendingRequest) return pendingRequest;
-
-  const request = (async () => {
-    try {
-      const destination = await geocodeCalculatorCity(city, normalizedPostalCode);
-      const distanceKm = await fetchCalculatorRouteDistanceKm(destination);
-      const extraKm = Math.max(0, distanceKm - calculatorTravelSettings.includedKm);
-      const fee = Math.round(extraKm * calculatorTravelSettings.pricePerExtraKm * 100) / 100;
-      const result = { status: "ok", distanceKm, fee };
-      writeCalculatorTravelCache(cityKey, result);
-      return result;
-    } catch (error) {
-      console.warn("Les frais de déplacement seront calculés lors du devis définitif.", error);
-      const fallbackResult = getUnavailableTravelResult();
-      writeCalculatorTravelCache(cityKey, fallbackResult);
-      return fallbackResult;
-    } finally {
-      calculatorTravelRequests.delete(cityKey);
-    }
-  })();
-
-  calculatorTravelRequests.set(cityKey, request);
-  return request;
+function updateCalculatorMeasure() {
+  const isLength = document.getElementById("calcProject")?.value === "baseboards";
+  setCalculatorText("calcMeasureLabel", isLength ? "Longueur approximative" : "Surface approximative");
+  setCalculatorText("calcMeasureUnit", isLength ? "ml" : "m²");
+  setCalculatorText("calcMeasureHelp", isLength
+    ? "Indiquez la longueur totale de plinthes souhaitée en mètres linéaires."
+    : "Pour une pièce rectangulaire : longueur × largeur. Exemple : 4 m × 5 m = 20 m².");
 }
 
 function getCalculatorData() {
@@ -629,7 +362,7 @@ function getCalculatorData() {
   };
 }
 
-async function calculateQuote(requestId = calculatorQuoteRequestId) {
+function renderProjectSummary() {
   const data = getCalculatorData();
   const quoteLink = document.getElementById("quoteWhatsapp");
   const quoteEmpty = document.getElementById("quoteEmpty");
@@ -637,121 +370,79 @@ async function calculateQuote(requestId = calculatorQuoteRequestId) {
 
   if (!quoteLink || !quoteEmpty || !quoteContent || !data.surface || !data.projectKey) return false;
 
-  const baseRate = calculatorBaseRates[data.projectKey] || 0;
   const projectUnit = getCalculatorProjectUnit(data.projectKey);
-  const formatAdjustment = calculatorAdjustments.format[data.formatKey] || 0;
-  const supportAdjustment = calculatorAdjustments.support[data.supportKey] || 0;
-  const removalAdjustment = calculatorAdjustments.removal[data.removalKey] || 0;
-  const flatAdjustment = calculatorAdjustments.flat[data.flat] || 0;
-  const baseboardsAdjustment = data.baseboards === "Oui" && data.projectKey !== "baseboards" ? 10 : 0;
-  const estimatedRate = baseRate + formatAdjustment + supportAdjustment + removalAdjustment + flatAdjustment + baseboardsAdjustment;
-  const workPrice = estimatedRate * data.surface;
-  const travelResult = await calculateTravelFees(data.city, data.postalCode);
-
-  if (requestId !== calculatorQuoteRequestId) {
-    return false;
-  }
-
-  const travelFee = travelResult.status === "ok" ? travelResult.fee : 0;
-  const averagePrice = workPrice + travelFee;
-  const lowPrice = Math.round(workPrice * 0.85 + travelFee);
-  const highPrice = Math.round(workPrice * 1.15 + travelFee);
-  const travelDistanceText = getTravelDistanceText(travelResult);
-  const travelFeeText = getTravelFeeText(travelResult);
-
-  setCalculatorText("quoteLow", formatEuros(lowPrice));
-  setCalculatorText("quoteHigh", formatEuros(highPrice));
-  setCalculatorText("quoteAverage", formatEuros(averagePrice));
-  setCalculatorText("quotePerM2", `${Math.round(estimatedRate)} €/${projectUnit}`);
-  setCalculatorText("quoteSupplyNote", data.tilesBought === "Oui"
-    ? "Le carrelage est déjà acheté."
-    : "Le choix du carrelage pourra être accompagné par LL Carrelage.");
-
+  const measureLabel = data.projectKey === "baseboards" ? "Longueur" : "Surface";
+  const format = data.format.replace(/(\d+)x(\d+)/g, "$1 × $2 cm");
   setCalculatorText("summaryProject", data.project);
+  setCalculatorText("summaryMeasureLabel", measureLabel);
   setCalculatorText("summarySurface", `${data.surface.toLocaleString("fr-FR")} ${projectUnit}`);
   setCalculatorText("summaryCity", data.city);
   setCalculatorText("summaryPostalCode", data.postalCode);
-  setCalculatorText("summaryDistance", travelDistanceText);
-  setCalculatorText("summaryTravelFee", travelFeeText);
   setCalculatorText("summaryTiles", data.tilesBought);
-  setCalculatorText("summaryFormat", data.format);
+  setCalculatorText("summaryFormat", format);
   setCalculatorText("summarySupport", data.support);
   setCalculatorText("summaryRemoval", data.removal);
   setCalculatorText("summaryFlat", data.flat);
   setCalculatorText("summaryBaseboards", data.baseboards);
   setCalculatorText("summaryTimeline", data.timeline);
   setCalculatorText("summaryContact", `${data.name} · ${data.phone}${data.email ? ` · ${data.email}` : ""}`);
+  setCalculatorText("summaryMessage", data.message || "Aucun");
 
   const whatsappMessage = [
-    "Bonjour LL Carrelage, je souhaite vous envoyer ma demande de devis.",
+    "Bonjour,",
     "",
-    `Type de chantier : ${data.project}`,
-    `Surface : ${data.surface} ${projectUnit}`,
-    `Ville : ${data.city}`,
-    `Code postal : ${data.postalCode}`,
-    `Distance : ${travelDistanceText}`,
-    `Frais de déplacement : ${travelFeeText}`,
-    `Carrelage déjà acheté : ${data.tilesBought}`,
-    `Format du carrelage : ${data.format}`,
+    "Je souhaite obtenir un devis pour mon projet de carrelage.",
+    "",
+    `Type de travaux : ${data.project}`,
+    `${measureLabel} : ${data.surface.toLocaleString("fr-FR")} ${projectUnit}`,
+    `Format du carrelage : ${format}`,
     `Support actuel : ${data.support}`,
-    `Ancien revêtement : ${data.removal}`,
+    `Ancien revêtement à retirer : ${data.removal}`,
     `Sol ou mur plat : ${data.flat}`,
     `Pose des plinthes : ${data.baseboards}`,
+    `Carrelage déjà acheté : ${data.tilesBought}`,
+    `Ville du chantier : ${data.city}`,
+    `Code postal : ${data.postalCode}`,
     `Délai souhaité : ${data.timeline}`,
     `Nom : ${data.name}`,
     `Téléphone : ${data.phone}`,
-    `Email : ${data.email || "Non renseigné"}`,
+    `E-mail : ${data.email || "Non renseigné"}`,
     `Message complémentaire : ${data.message || "Aucun"}`,
-    `Estimation indicative : ${formatEuros(lowPrice)} - ${formatEuros(highPrice)}`,
-    "Hors fourniture du carrelage sauf indication contraire.",
+    "",
+    "Pouvez-vous me faire une estimation personnalisée après étude de ce projet ?",
+    "Merci.",
   ].join("\n");
 
   quoteLink.href = `https://wa.me/33618855886?text=${encodeURIComponent(whatsappMessage)}`;
   quoteLink.classList.remove("disabled");
   quoteLink.setAttribute("aria-disabled", "false");
+  quoteLink.removeAttribute("tabindex");
   quoteEmpty.hidden = true;
   quoteContent.hidden = false;
   return true;
 }
 
-function isTextLikeCalculatorControl(control) {
-  if (!control?.matches) return false;
-  return control.matches("textarea, input:not([type='radio']):not([type='checkbox'])");
+function clearProjectSummary() {
+  const quoteEmpty = document.getElementById("quoteEmpty");
+  const quoteContent = document.getElementById("quoteContent");
+  const quoteLink = document.getElementById("quoteWhatsapp");
+  if (quoteEmpty) quoteEmpty.hidden = false;
+  if (quoteContent) quoteContent.hidden = true;
+  if (quoteLink) {
+    quoteLink.removeAttribute("href");
+    quoteLink.classList.add("disabled");
+    quoteLink.setAttribute("aria-disabled", "true");
+    quoteLink.setAttribute("tabindex", "-1");
+  }
 }
 
-async function refreshCalculatorQuote(requestId = ++calculatorQuoteRequestId) {
-  const result = await calculateQuote(requestId);
-
-  if (requestId !== calculatorQuoteRequestId) {
-    return false;
-  }
-
-  return result;
-}
-
-function scheduleCalculatorRecalculation(event) {
-  const requestId = ++calculatorQuoteRequestId;
-  window.clearTimeout(calculatorRecalculationTimer);
-
-  if (!calculatorHasEstimate || !calculatorForm || !calculatorForm.checkValidity()) {
+function refreshProjectSummary() {
+  if (!calculatorHasSummary || !calculatorForm) return;
+  if (!calculatorForm.checkValidity() || !isValidPhone(getCalculatorData().phone)) {
+    clearProjectSummary();
     return;
   }
-
-  const data = getCalculatorData();
-  if (normalizeCalculatorCity(data.city).length < 2 || !isValidFrenchPostalCode(data.postalCode)) {
-    return;
-  }
-
-  const delay = isTextLikeCalculatorControl(event?.target) ? 600 : 0;
-
-  if (delay > 0) {
-    calculatorRecalculationTimer = window.setTimeout(() => {
-      void refreshCalculatorQuote(requestId);
-    }, delay);
-    return;
-  }
-
-  void refreshCalculatorQuote(requestId);
+  renderProjectSummary();
 }
 
 function updateCalculatorStep(nextIndex) {
@@ -798,21 +489,13 @@ function validateCalculatorStep() {
 function restartCalculator() {
   if (!calculatorForm) return;
   calculatorForm.reset();
-  calculatorHasEstimate = false;
+  calculatorHasSummary = false;
+  updateCalculatorMeasure();
   updateCalculatorPostalCodeValidity();
   clearAllCalculatorInvalidStates();
   updateCalculatorStep(0);
 
-  const quoteEmpty = document.getElementById("quoteEmpty");
-  const quoteContent = document.getElementById("quoteContent");
-  const quoteLink = document.getElementById("quoteWhatsapp");
-  if (quoteEmpty) quoteEmpty.hidden = false;
-  if (quoteContent) quoteContent.hidden = true;
-  if (quoteLink) {
-    quoteLink.href = "https://wa.me/33618855886";
-    quoteLink.classList.add("disabled");
-    quoteLink.setAttribute("aria-disabled", "true");
-  }
+  clearProjectSummary();
 
   document.getElementById("devis")?.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -843,6 +526,7 @@ if ("IntersectionObserver" in window) {
 }
 
 updateCalculatorStep(0);
+updateCalculatorMeasure();
 
 if (leadForm) {
   leadForm.addEventListener("submit", sendLead);
@@ -871,7 +555,7 @@ if (calculatorForm) {
 
   calculatorRestart?.addEventListener("click", restartCalculator);
 
-  calculatorForm.addEventListener("submit", async (event) => {
+  calculatorForm.addEventListener("submit", (event) => {
     event.preventDefault();
 
     if (!validateCalculatorStep() || !calculatorForm.checkValidity()) {
@@ -890,10 +574,10 @@ if (calculatorForm) {
       return;
     }
 
-    calculatorHasEstimate = await refreshCalculatorQuote();
-    if (calculatorHasEstimate) {
-      animateEstimatedBudget();
-      scrollToEstimatedBudget();
+    calculatorHasSummary = renderProjectSummary();
+    if (calculatorHasSummary) {
+      animateProjectSummary();
+      scrollToProjectSummary();
     }
   });
 
@@ -906,12 +590,14 @@ if (calculatorForm) {
       clearCalculatorInvalidState(event.target);
     }
 
-    if (isTextLikeCalculatorControl(event.target)) {
-      scheduleCalculatorRecalculation(event);
-    }
+    refreshProjectSummary();
   });
 
   calculatorForm.addEventListener("change", (event) => {
+    if (event.target?.id === "calcProject") {
+      updateCalculatorMeasure();
+    }
+
     if (event.target?.id === "calcPostalCode") {
       updateCalculatorPostalCodeValidity();
     }
@@ -920,9 +606,7 @@ if (calculatorForm) {
       clearCalculatorInvalidState(event.target);
     }
 
-    if (!isTextLikeCalculatorControl(event.target)) {
-      scheduleCalculatorRecalculation(event);
-    }
+    refreshProjectSummary();
   });
 }
 
