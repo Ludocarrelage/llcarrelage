@@ -3201,3 +3201,52 @@ textarea {
 #summaryMessage {
   white-space: pre-wrap;
 }
+
+/* Même présentation avant / après sur l'accueil et la page terrasse. */
+.terrace-comparison .realisations-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 28px;
+}
+
+.terrace-comparison .realisations-card {
+  position: relative;
+}
+
+.terrace-comparison .realisations-card:first-child {
+  grid-column: auto;
+  grid-row: auto;
+}
+
+.terrace-comparison .realisations-card picture,
+.terrace-comparison .realisations-card:first-child picture {
+  aspect-ratio: 3 / 4;
+  height: auto;
+  min-height: 0;
+  border-radius: 8px;
+}
+
+.terrace-comparison .comparison-badge {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  padding: 7px 12px;
+  border-radius: 4px;
+  background: #26363b;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  pointer-events: none;
+}
+
+.terrace-comparison .realisations-card:first-child .comparison-badge {
+  background: #f8f5ef;
+  color: #26363b;
+}
+
+@media (max-width: 700px) {
+  .terrace-comparison .realisations-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+}
