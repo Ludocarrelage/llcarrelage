@@ -936,6 +936,7 @@ galleryItems.forEach((item, index) => {
 });
 
 galleryClose?.addEventListener("click", closeGallery);
+document.getElementById("galleryBrowse")?.addEventListener("click", () => openGallery(0));
 galleryPrevious?.addEventListener("click", () => showGalleryImage(galleryCurrentIndex - 1));
 galleryNext?.addEventListener("click", () => showGalleryImage(galleryCurrentIndex + 1));
 
