@@ -3250,3 +3250,12 @@ textarea {
     gap: 28px;
   }
 }
+
+/* Rendre les liens de contenu repérables sans changer la navigation. */
+.service-page .section-text a,
+.service-page .service-advice-text a,
+.service-page .faq-item p a,
+.home-page .service-area-content p a {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
