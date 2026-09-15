@@ -43,15 +43,15 @@
     "@id": "https://llcarrelage.fr/depose-carrelage/#service"
   }
   </script>
-  <link rel="stylesheet" href="/styles.css?v=20260914d" />
+  <link rel="stylesheet" href="/styles.css?v=20260914e" />
 </head>
-<body>
+<body class="site-page">
   <header class="navbar">
     <a href="/" class="logo" aria-label="Accueil LL Carrelage">
       <picture><source srcset="/logo-ll-carrelage-480.webp" type="image/webp"><img src="/logo-ll-carrelage.jpg" alt="LL Carrelage" width="1984" height="1984" decoding="async" /></picture>
     </a>
 
-    <button class="menu-btn" id="menuBtn" type="button" aria-label="Ouvrir le menu" aria-expanded="false">
+    <button class="menu-btn" id="menuBtn" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="navLinks">
       <span></span>
       <span></span>
       <span></span>
@@ -59,16 +59,16 @@
 
     <nav class="nav-links" id="navLinks" aria-label="Navigation principale">
       <a href="/#prestations">Prestations</a>
+      <a href="/#realisations">Réalisations</a>
+      <a href="/#devis">Estimer</a>
+      <a href="/#avis">Avis clients</a>
       <a href="/#zone">Zone</a>
-      <a href="/#realisations">R&eacute;alisations</a>
-      <a href="/#devis">Devis</a>
-      <a href="/#engagement">Engagement</a>
       <a href="/#faq">FAQ</a>
       <a href="/#contact">Contact</a>
     </nav>
 
     <a class="header-phone" href="tel:+33618855886" aria-label="Appeler LL Carrelage au 06 18 85 58 86">
-      <span aria-hidden="true">&#9742;</span>
+      <span aria-hidden="true">☎</span>
       06 18 85 58 86
     </a>
   </header>
@@ -83,7 +83,7 @@
           <div class="hero-actions">
             <a href="/#devis" class="btn primary">Demander un devis</a>
             <a href="tel:+33618855886" class="btn secondary">Appeler</a>
-            <a href="https://wa.me/33618855886" class="btn secondary hero-whatsapp" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">WhatsApp</a>
+            <a href="https://wa.me/33618855886" class="hero-whatsapp text-link" target="_blank" rel="noopener noreferrer" referrerpolicy="no-referrer">WhatsApp</a>
           </div>
           <p class="hero-trust">Diagnostic clair &bull; Chantier propre &bull; Devis gratuit</p>
         </div>
@@ -179,7 +179,7 @@
       </ol>
     </section>
 
-    <section class="section service-advice-section dark">
+    <section class="section service-advice-section">
       <div class="service-advice-layout">
         <div>
           <p class="eyebrow">Conseils</p>
@@ -246,7 +246,7 @@
       </div>
     </section>
 
-    <section class="section dark service-final-cta">
+    <section class="section service-final-cta">
       <div class="service-cta-panel">
         <p class="eyebrow">Devis gratuit</p>
         <h2>Un ancien carrelage &agrave; retirer ?</h2>
