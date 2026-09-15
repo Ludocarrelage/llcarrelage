@@ -3151,3 +3151,168 @@ textarea {
   text-decoration: underline;
   text-underline-offset: 0.18em;
 }
+
+/* Parcours de contact : composants légers dans l’identité existante. */
+.home-page .project-context {
+  border-top: 1px solid #425055;
+  color: #d5dedb;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  margin-top: 28px;
+  max-width: 740px;
+  padding-top: 22px;
+}
+
+.home-page .section-contact {
+  margin-top: 28px;
+}
+
+.home-page .section-contact a,
+.home-page .form-shortcut {
+  min-height: 44px;
+}
+
+.home-page .form-shortcut {
+  color: #d5dedb;
+  margin-top: 12px;
+}
+
+.client-process {
+  margin-top: 40px;
+}
+
+.client-process h3 {
+  font-size: clamp(1.4rem, 2.2vw, 1.8rem);
+  letter-spacing: -0.035em;
+}
+
+.client-steps {
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  list-style: none;
+  margin-top: 24px;
+  padding-top: 24px;
+}
+
+.client-steps span {
+  color: #a84411;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.client-steps h4 {
+  font-size: 1rem;
+  margin: 10px 0 8px;
+}
+
+.client-steps p,
+.contact-help {
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.quick-contact {
+  align-items: center;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 36px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+}
+
+.site-page .quick-contact .section-header {
+  margin-bottom: 0;
+}
+
+.quick-contact-actions {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.quick-contact .secondary {
+  background: transparent;
+  border-color: #bec2be;
+  color: var(--ink);
+}
+
+.lead-draft {
+  overflow-wrap: anywhere;
+}
+
+.mobile-contact-bar {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .client-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-contact {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .quick-contact-actions .btn {
+    width: 100%;
+  }
+}
+
+@media (max-width: 700px) {
+  .site-page {
+    padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .site-page > .whatsapp {
+    display: none;
+  }
+
+  .mobile-contact-bar {
+    background: #fff;
+    border-top: 1px solid var(--line);
+    bottom: 0;
+    display: grid;
+    gap: 6px;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    left: 0;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px));
+    position: fixed;
+    right: 0;
+    z-index: 90;
+  }
+
+  .mobile-contact-bar a {
+    align-items: center;
+    border-radius: 10px;
+    display: flex;
+    font-size: 0.9rem;
+    font-weight: 700;
+    justify-content: center;
+    min-height: 48px;
+    padding: 10px 4px;
+  }
+
+  .mobile-contact-whatsapp {
+    color: #245c40;
+  }
+
+  .mobile-contact-project {
+    background: var(--accent);
+    color: #171d20;
+  }
+
+  .mobile-contact-bar a:focus-visible {
+    outline: 3px solid var(--accent-light);
+    outline-offset: 2px;
+  }
+
+  .site-page.menu-open .mobile-contact-bar,
+  .site-page:has(input:focus, textarea:focus, select:focus) .mobile-contact-bar {
+    visibility: hidden;
+  }
+}

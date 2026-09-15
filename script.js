@@ -49,8 +49,19 @@ window.addEventListener("resize", () => {
   }
 });
 
+function clearLeadDraft() {
+  const draftLink = document.getElementById("leadWhatsapp");
+  const status = document.getElementById("formStatus");
+  if (draftLink) {
+    draftLink.hidden = true;
+    draftLink.removeAttribute("href");
+  }
+  if (status) status.textContent = "";
+}
+
 function sendLead(event) {
   event.preventDefault();
+  clearLeadDraft();
 
   const name = limitText(document.getElementById("name")?.value, 80);
   const phone = limitText(document.getElementById("phone")?.value, 25);
@@ -80,9 +91,16 @@ function sendLead(event) {
   ].join("\n");
 
   const url = `https://wa.me/33618855886?text=${encodeURIComponent(text)}`;
+  const draftLink = document.getElementById("leadWhatsapp");
+
+  // Leave a usable link even when the browser blocks the new window.
+  if (draftLink) {
+    draftLink.href = url;
+    draftLink.hidden = false;
+  }
 
   if (status) {
-    status.textContent = "Demande prête. Ouverture de WhatsApp...";
+    status.textContent = "Votre message est prêt. Envoyez-le dans WhatsApp pour que je reçoive votre demande.";
   }
 
   const whatsappWindow = window.open(url, "_blank", "noopener,noreferrer");
@@ -530,6 +548,8 @@ updateCalculatorMeasure();
 
 if (leadForm) {
   leadForm.addEventListener("submit", sendLead);
+  leadForm.addEventListener("input", clearLeadDraft);
+  leadForm.addEventListener("change", clearLeadDraft);
 }
 
 if (calculatorForm) {
