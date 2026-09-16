@@ -2663,7 +2663,25 @@ textarea {
 
 @media (max-width: 768px) {
   .service-card-image {
-    height: 150px;
+    height: 140px;
+    object-fit: cover;
+    object-position: center center;
+  }
+
+  .home-page .home-services .card:nth-child(1) .service-card-image {
+    object-position: center 60%;
+  }
+
+  .home-page .home-services .card:nth-child(2) .service-card-image {
+    object-position: center 58%;
+  }
+
+  .home-page .home-services .card:nth-child(5) .service-card-image {
+    object-position: center 55%;
+  }
+
+  .home-page .home-services .card:nth-child(6) .service-card-image {
+    object-position: center 65%;
   }
 
   .service-hero-image {
