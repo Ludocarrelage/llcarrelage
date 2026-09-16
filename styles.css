@@ -2635,6 +2635,31 @@ textarea {
   padding: 28px;
 }
 
+.home-page .home-services .card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.service-card-image,
+.service-hero-image {
+  aspect-ratio: 3 / 2;
+  display: block;
+  height: auto;
+  object-fit: cover;
+  width: calc(100% + 56px);
+}
+
+.service-card-image {
+  border-radius: 12px 12px 0 0;
+  margin: -28px -28px 24px;
+}
+
+.service-hero-image {
+  border-radius: 12px 12px 0 0;
+  margin: -28px -28px 24px;
+}
+
 .home-page .home-services .card:hover,
 .service-related-card:hover {
   border-color: var(--accent);
@@ -2661,9 +2686,9 @@ textarea {
 
 .home-page .card-arrow {
   color: #a84411;
-  position: absolute;
-  right: 28px;
-  top: 24px;
+  display: inline-block;
+  margin-left: 8px;
+  position: static;
 }
 
 .home-page .card p,
@@ -2981,6 +3006,16 @@ textarea {
   .service-tip {
     min-height: auto;
     padding: 24px;
+  }
+
+  .service-card-image,
+  .service-hero-image {
+    width: calc(100% + 48px);
+  }
+
+  .service-card-image,
+  .service-hero-image {
+    margin: -24px -24px 22px;
   }
 
   .home-page .service-extra a {
