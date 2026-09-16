@@ -2643,21 +2643,32 @@ textarea {
 
 .service-card-image,
 .service-hero-image {
-  aspect-ratio: 3 / 2;
   display: block;
-  height: auto;
   object-fit: cover;
+  object-position: center;
   width: calc(100% + 56px);
 }
 
 .service-card-image {
   border-radius: 12px 12px 0 0;
+  height: 170px;
   margin: -28px -28px 24px;
 }
 
 .service-hero-image {
   border-radius: 12px 12px 0 0;
+  height: 280px;
   margin: -28px -28px 24px;
+}
+
+@media (max-width: 768px) {
+  .service-card-image {
+    height: 150px;
+  }
+
+  .service-hero-image {
+    height: 230px;
+  }
 }
 
 .home-page .home-services .card:hover,
