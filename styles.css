@@ -2685,8 +2685,15 @@ textarea {
   }
 
   .service-hero-image {
-    height: 190px;
-    max-height: 190px;
+    height: 180px;
+    max-height: 180px;
+  }
+}
+
+@media (max-width: 430px) {
+  .service-hero-image {
+    height: 170px;
+    max-height: 170px;
   }
 }
 
