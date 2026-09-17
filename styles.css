@@ -2685,7 +2685,8 @@ textarea {
   }
 
   .service-hero-image {
-    height: 230px;
+    height: 190px;
+    max-height: 190px;
   }
 }
 
