@@ -54,7 +54,7 @@ textarea {
   border-bottom: 2px solid var(--accent);
   color: var(--ink);
   display: flex;
-  height: 76px;
+  height: 90px;
   justify-content: space-between;
   left: 0;
   padding: 0 clamp(20px, 6vw, 92px);
@@ -68,25 +68,42 @@ textarea {
 .navbar.scrolled {
   background: #fff;
   box-shadow: 0 12px 34px rgba(38, 54, 59, 0.12);
-  height: 66px;
+  height: 76px;
 }
 
 .logo {
+  align-items: center;
   background: #fff;
-  border-radius: 0;
-  display: block;
-  height: 62px;
+  border-radius: 50%;
+  display: flex;
+  height: 84px;
+  justify-content: center;
   overflow: hidden;
-  width: 122px;
+  width: 84px;
+}
+
+.navbar.scrolled .logo {
+  height: 70px;
+  width: 70px;
+}
+
+.logo picture {
+  align-items: center;
+  display: flex;
+  height: 100%;
+  justify-content: center;
+  width: 100%;
 }
 
 .logo img {
   display: block;
-  height: 122px;
-  object-fit: cover;
+  height: auto;
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
   object-position: center;
-  transform: translateY(-30px);
-  width: 122px;
+  transform: none;
+  width: auto;
 }
 
 .nav-links {
@@ -1644,14 +1661,16 @@ textarea {
 }
 
 .footer-logo {
-  height: 56px;
-  width: 110px;
+  height: 72px;
+  width: 72px;
 }
 
 .footer-logo img {
-  height: 110px;
-  transform: translateY(-27px);
-  width: 110px;
+  height: auto;
+  max-height: 100%;
+  max-width: 100%;
+  transform: none;
+  width: auto;
 }
 
 .footer a {
@@ -1689,6 +1708,17 @@ textarea {
 }
 
 @media (max-width: 900px) {
+  .navbar,
+  .navbar.scrolled {
+    height: 76px;
+  }
+
+  .logo,
+  .navbar.scrolled .logo {
+    height: 70px;
+    width: 70px;
+  }
+
   .menu-btn {
     display: inline-flex;
     position: relative;
@@ -1764,7 +1794,7 @@ textarea {
 
 @media (max-width: 560px) {
   .navbar {
-    height: 68px;
+    height: 76px;
   }
 
   .hero {
@@ -1807,14 +1837,14 @@ textarea {
   }
 
   .logo {
-    height: 54px;
-    width: 106px;
+    height: 68px;
+    width: 68px;
   }
 
   .logo img {
-    height: 106px;
-    transform: translateY(-26px);
-    width: 106px;
+    height: auto;
+    transform: none;
+    width: auto;
   }
 
   .footer-brand {
@@ -1824,8 +1854,8 @@ textarea {
   }
 
   .footer-logo {
-    height: 54px;
-    width: 106px;
+    height: 64px;
+    width: 64px;
   }
 
   .hero {
@@ -3128,14 +3158,15 @@ textarea {
   }
 
   .navbar > .logo {
-    flex: 0 0 80px;
-    height: 42px;
+    flex: 0 0 62px;
+    height: 62px;
+    width: 62px;
   }
 
   .navbar > .logo img {
-    width: 80px;
-    height: 80px;
-    transform: translateY(-19px);
+    height: auto;
+    transform: none;
+    width: auto;
   }
 
   .navbar .menu-btn {

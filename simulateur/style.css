@@ -65,7 +65,7 @@ button {
 .brand-mark {
   align-items: center;
   background: #fff;
-  border-radius: 18px;
+  border-radius: 50%;
   display: flex;
   flex: 0 0 76px;
   height: 76px;
@@ -76,11 +76,13 @@ button {
 
 .brand-mark img {
   display: block;
-  height: 104px;
-  object-fit: cover;
+  height: auto;
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
   object-position: center;
-  transform: translateY(-12px);
-  width: 104px;
+  transform: none;
+  width: auto;
 }
 
 .brand-name {
