@@ -1,8 +1,8 @@
-# LL Carrelage
+# LL Carrelage Conception
 
-Site vitrine de LL Carrelage, artisan carreleur intervenant à Villeneuve-Saint-Denis (77174) et dans un rayon d'environ 30 km.
+Site vitrine de LL Carrelage Conception, artisan carreleur intervenant à Villeneuve-Saint-Denis (77174) et dans un rayon d'environ 30 km.
 
-Le site présente les prestations, la zone d'intervention, des réalisations, une FAQ et deux formulaires préparant une demande WhatsApp. Le formulaire public « Décrivez votre projet » produit un récapitulatif sans prix ; le devis est établi personnellement par LL Carrelage.
+Le site présente les prestations, la zone d'intervention, des réalisations, une FAQ et deux formulaires préparant une demande WhatsApp. Le formulaire public « Décrivez votre projet » produit un récapitulatif sans prix ; le devis est établi personnellement par LL Carrelage Conception.
 
 ## Technologies
 
@@ -43,7 +43,7 @@ Pour un nouveau chantier, ajouter un titre et un court contexte distincts avant 
 
 ## Contact et mesure
 
-Le bloc « Vous préférez être rappelé ? » ouvre WhatsApp avec une demande de rappel, ou permet d'appeler directement. Les formulaires préparent également un message : le visiteur doit l'envoyer dans WhatsApp pour que LL Carrelage le reçoive. Le formulaire court conserve un lien vers le message préparé si la nouvelle fenêtre est bloquée ; modifier un champ invalide ce lien jusqu'à une nouvelle validation.
+Le bloc « Vous préférez être rappelé ? » ouvre WhatsApp avec une demande de rappel, ou permet d'appeler directement. Les formulaires préparent également un message : le visiteur doit l'envoyer dans WhatsApp pour que LL Carrelage Conception le reçoive. Le formulaire court conserve un lien vers le message préparé si la nouvelle fenêtre est bloquée ; modifier un champ invalide ce lien jusqu'à une nouvelle validation.
 
 La barre Appeler / WhatsApp / Devis apparaît uniquement sur mobile et remplace alors le bouton WhatsApp flottant. Vérifier les huit pages publiques après toute modification de cette barre, notamment le menu, la saisie et le pied de page.
 

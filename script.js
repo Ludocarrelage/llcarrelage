@@ -84,7 +84,7 @@ function sendLead(event) {
   }
 
   const text = [
-    `Bonjour LL Carrelage, je m'appelle ${name}.`,
+    `Bonjour LL Carrelage Conception, je m'appelle ${name}.`,
     `Téléphone : ${phone}`,
     `Projet : ${project}`,
     message ? `Message : ${message}` : "Pouvez-vous me recontacter ?"
@@ -131,8 +131,8 @@ function showGalleryImage(index) {
   const image = item.querySelector("img");
 
   galleryLightboxImage.src = item.dataset.gallerySrc || image?.currentSrc || image?.getAttribute("src") || "";
-  galleryLightboxImage.alt = image?.alt || "Réalisation LL Carrelage";
-  if (galleryLightboxCaption) galleryLightboxCaption.textContent = item.dataset.galleryCaption || "Réalisation LL Carrelage";
+  galleryLightboxImage.alt = image?.alt || "Réalisation LL Carrelage Conception";
+  if (galleryLightboxCaption) galleryLightboxCaption.textContent = item.dataset.galleryCaption || "Réalisation LL Carrelage Conception";
   if (galleryLightboxCounter) galleryLightboxCounter.textContent = `${galleryCurrentIndex + 1} / ${galleryItems.length}`;
 }
 

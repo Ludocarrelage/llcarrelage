@@ -1,4 +1,4 @@
-SECURITE DU SITE LL CARRELAGE
+SECURITE DU SITE LL CARRELAGE CONCEPTION
 
 1. Publier le site uniquement avec une adresse HTTPS valide.
 2. Conserver le fichier _headers lors de la mise en ligne.
