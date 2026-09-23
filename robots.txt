@@ -1,5 +1,4 @@
 ﻿User-agent: *
-Disallow: /simulateur/
 Allow: /
 
 Sitemap: https://llcarrelage.fr/sitemap.xml
