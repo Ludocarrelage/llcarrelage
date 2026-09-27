@@ -456,6 +456,51 @@ input[type="number"]:focus {
   white-space: nowrap;
 }
 
+.social-toggle {
+  grid-template-columns: auto minmax(0, 1fr);
+  margin-bottom: 8px;
+}
+
+.social-toggle input {
+  appearance: none;
+  background: #aea9a3;
+  border-radius: 999px;
+  cursor: pointer;
+  height: 28px;
+  margin: 0;
+  position: relative;
+  width: 48px;
+}
+
+.social-toggle input::before {
+  background: #fff;
+  border-radius: 50%;
+  content: "";
+  height: 20px;
+  left: 4px;
+  position: absolute;
+  top: 4px;
+  transition: transform 0.15s ease;
+  width: 20px;
+}
+
+.social-toggle input:checked {
+  background: var(--accent);
+}
+
+.social-toggle input:checked::before {
+  transform: translateX(20px);
+}
+
+.social-toggle input:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.social-toggle span {
+  overflow-wrap: anywhere;
+}
+
 .expandable-field {
   display: none;
   margin: 0 0 12px;
@@ -607,6 +652,16 @@ input[type="number"]:focus {
   justify-content: space-between;
   min-height: 48px;
   padding: 10px 12px;
+}
+
+.summary-list div[hidden] {
+  display: none;
+}
+
+.summary-list .social-summary-row {
+  background: var(--accent-soft);
+  border-color: rgba(239, 104, 30, 0.34);
+  gap: 12px;
 }
 
 .summary-list span {

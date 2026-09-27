@@ -2,6 +2,7 @@
   "use strict";
 
   const MINIMUM_INTERVENTION = 80;
+  const SOCIAL_PROVISION_RATE = 0.215;
   const DEFAULT_HOURLY_TARGET = 40;
   const HOURLY_TARGET_STORAGE_KEY = "llcarrelage_hourly_target";
 
@@ -244,6 +245,7 @@
     travelCost: 0,
     otherCost: 0,
     marginRate: 0.05,
+    includeSocialProvision: false,
     realSuppliesCost: 0,
     realTravelCost: 0,
     wasteCost: 0,
@@ -274,20 +276,47 @@
     return Math.round(value);
   }
 
+  function roundCents(value) {
+    if (!Number.isFinite(value)) return 0;
+    const absolute = Math.abs(value);
+    return Math.sign(value) * Math.round((absolute + Number.EPSILON * Math.max(1, absolute)) * 100) / 100;
+  }
+
+  // Compute from the original, unrounded estimate on every call so toggling
+  // the option cannot compound the provision.
+  function applySocialProvision(base, included) {
+    const baseRaw = Number.isFinite(base) && base > 0 ? base : 0;
+    const totalRaw = included ? baseRaw / (1 - SOCIAL_PROVISION_RATE) : baseRaw;
+    const total = included ? roundCents(totalRaw) : roundEuro(baseRaw);
+    const baseTotal = included ? roundCents(baseRaw) : total;
+    return {
+      included: Boolean(included),
+      baseRaw,
+      totalRaw,
+      provisionRaw: included ? totalRaw * SOCIAL_PROVISION_RATE : 0,
+      baseTotal,
+      // Make the displayed components add up exactly to the displayed total.
+      provisionAmount: included ? roundCents(total - baseTotal) : 0,
+      total
+    };
+  }
+
   function formatCurrency(value) {
     return new Intl.NumberFormat("fr-FR", {
       style: "currency",
       currency: "EUR",
-      maximumFractionDigits: 0
-    }).format(roundEuro(value));
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(Math.max(0, roundCents(value)));
   }
 
   function formatInternalCurrency(value, showPlus) {
-    const rounded = roundDisplayEuro(value);
+    const rounded = roundCents(value);
     const formatted = new Intl.NumberFormat("fr-FR", {
       style: "currency",
       currency: "EUR",
-      maximumFractionDigits: 0
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(rounded);
 
     if (showPlus && rounded > 0) {
@@ -406,6 +435,7 @@
     merged.travelCost = numberValue(merged.travelCost);
     merged.otherCost = numberValue(merged.otherCost);
     merged.marginRate = numberValue(merged.marginRate);
+    merged.includeSocialProvision = Boolean(merged.includeSocialProvision);
     merged.realSuppliesCost = numberValue(merged.realSuppliesCost);
     merged.realTravelCost = numberValue(merged.realTravelCost);
     merged.wasteCost = numberValue(merged.wasteCost);
@@ -422,7 +452,7 @@
   function addLine(lines, label, amount, includeZero) {
     const safeAmount = roundEuro(amount);
     if (safeAmount > 0 || includeZero) {
-      lines.push({ label, amount: safeAmount });
+      lines.push({ label, amount: safeAmount, rawAmount: amount });
     }
   }
 
@@ -619,7 +649,8 @@
     const suppliesAmount = state.suppliesEstimate;
     const feesAmount = state.travelCost + state.otherCost;
     const total = laborSubtotal + marginAmount + suppliesAmount + feesAmount;
-    const roundedTotal = roundEuro(total);
+    const social = applySocialProvision(total, state.includeSocialProvision);
+    const roundedTotal = social.total;
 
     addLine(lines, suppliesLabels[state.suppliesType] || suppliesLabels.clientAll, suppliesAmount, suppliesAmount > 0);
     addLine(lines, "Déplacement", state.travelCost, state.travelCost > 0);
@@ -634,9 +665,18 @@
       suppliesAmount: roundEuro(suppliesAmount),
       feesAmount: roundEuro(feesAmount),
       marginAmount: roundEuro(marginAmount),
+      laborRaw: laborSubtotal,
+      suppliesRaw: suppliesAmount,
+      feesRaw: feesAmount,
+      marginRaw: marginAmount,
+      socialProvisionIncluded: social.included,
+      baseTotalRaw: social.baseRaw,
+      baseTotal: social.baseTotal,
+      socialProvisionRaw: social.provisionRaw,
+      socialProvisionAmount: social.provisionAmount,
       total: roundedTotal,
-      low: roundEuro(roundedTotal * 0.95),
-      high: roundEuro(roundedTotal * 1.1),
+      low: social.included ? roundCents(roundedTotal * 0.95) : roundEuro(roundedTotal * 0.95),
+      high: social.included ? roundCents(roundedTotal * 1.1) : roundEuro(roundedTotal * 1.1),
       tileFormatInfo,
       detailLines: lines,
       warningLines: warnings
@@ -693,7 +733,8 @@
       suppliesEstimate: numberValue(source.suppliesEstimate),
       travelCost: numberValue(source.travelCost),
       otherCost: numberValue(source.otherCost),
-      marginRate: numberValue(source.marginRate)
+      marginRate: numberValue(source.marginRate),
+      includeSocialProvision: Boolean(source.includeSocialProvision)
     };
   }
 
@@ -803,7 +844,8 @@
     const suppliesAmount = state.suppliesEstimate;
     const feesAmount = state.travelCost + state.otherCost;
     const total = laborSubtotal + marginAmount + suppliesAmount + feesAmount;
-    const roundedTotal = roundEuro(total);
+    const social = applySocialProvision(total, state.includeSocialProvision);
+    const roundedTotal = social.total;
 
     addLine(lines, paintingSuppliesLabels[state.suppliesType] || paintingSuppliesLabels.client, suppliesAmount, suppliesAmount > 0);
     addLine(lines, "Déplacement", state.travelCost, state.travelCost > 0);
@@ -817,9 +859,18 @@
       suppliesAmount: roundEuro(suppliesAmount),
       feesAmount: roundEuro(feesAmount),
       marginAmount: roundEuro(marginAmount),
+      laborRaw: laborSubtotal,
+      suppliesRaw: suppliesAmount,
+      feesRaw: feesAmount,
+      marginRaw: marginAmount,
+      socialProvisionIncluded: social.included,
+      baseTotalRaw: social.baseRaw,
+      baseTotal: social.baseTotal,
+      socialProvisionRaw: social.provisionRaw,
+      socialProvisionAmount: social.provisionAmount,
       total: roundedTotal,
-      low: roundEuro(roundedTotal * 0.95),
-      high: roundEuro(roundedTotal * 1.1),
+      low: social.included ? roundCents(roundedTotal * 0.95) : roundEuro(roundedTotal * 0.95),
+      high: social.included ? roundCents(roundedTotal * 1.1) : roundEuro(roundedTotal * 1.1),
       detailLines: lines,
       warningLines: warnings
     };
@@ -976,17 +1027,34 @@
     return rows;
   }
 
+  function adjustRowsToCents(rows, expectedTotal) {
+    if (!rows.length) {
+      if (expectedTotal > 0) rows.push({ label: "Prix HT avant provision", amount: expectedTotal });
+      return rows;
+    }
+    const currentTotal = rows.reduce((sum, row) => sum + row.amount, 0);
+    const largestIndex = rows.reduce((best, row, index) => row.amount > rows[best].amount ? index : best, 0);
+    rows[largestIndex].amount = roundCents(rows[largestIndex].amount + expectedTotal - currentTotal);
+    return rows;
+  }
+
   function buildClientCopyRows(result) {
     const laborLines = result.detailLines.filter((line) => !isFinanceLine(line));
     const laborRows = distributeRoundedTotal(laborLines, result.laborAmount, result.laborAmount + result.marginAmount);
     const rows = [...laborRows];
 
-    if (result.suppliesAmount > 0) {
-      rows.push({ label: "Fournitures", amount: roundEuro(result.suppliesAmount) });
+    if (result.socialProvisionIncluded ? result.suppliesRaw > 0 : result.suppliesAmount > 0) {
+      rows.push({ label: "Fournitures", amount: result.socialProvisionIncluded ? roundCents(result.state.suppliesEstimate) : roundEuro(result.suppliesAmount) });
     }
 
-    if (result.feesAmount > 0) {
-      rows.push({ label: "Déplacement / frais", amount: roundEuro(result.feesAmount) });
+    if (result.socialProvisionIncluded ? result.feesRaw > 0 : result.feesAmount > 0) {
+      rows.push({ label: "Déplacement / frais", amount: result.socialProvisionIncluded ? roundCents(result.state.travelCost + result.state.otherCost) : roundEuro(result.feesAmount) });
+    }
+
+    if (result.socialProvisionIncluded) {
+      adjustRowsToCents(rows, result.baseTotal);
+      rows.push({ label: "Cotisations + formation (21,5 %)", amount: result.socialProvisionAmount });
+      return rows;
     }
 
     return adjustRowsToTotal(rows, result.total);
@@ -1013,7 +1081,9 @@
       lines.push(`Carrelage : ${formatQuantity(tileFormatInfo.lengthCm)} × ${formatQuantity(tileFormatInfo.widthCm)} cm`);
     }
 
-    lines.push("", "TRAVAUX", ...buildCopyRowsText(buildClientCopyRows(result)), "", `TOTAL ESTIMÉ : ${formatCurrency(result.total)}`, "", "Estimation à confirmer après vérification du chantier.");
+    lines.push("", "TRAVAUX", ...buildCopyRowsText(buildClientCopyRows(result)));
+    if (!result.socialProvisionIncluded) lines.push("", "Cotisations non incluses");
+    lines.push("", `TOTAL ESTIMÉ HT : ${formatCurrency(result.total)}`, "", "Estimation à confirmer après vérification du chantier.");
 
     return lines.join("\n");
   }
@@ -1034,7 +1104,8 @@
   function buildInternalMemoText(result) {
     const state = result.state || {};
     const marginRate = result.project.kind === "brokenTiles" ? 0 : state.marginRate;
-    const billedLabor = result.laborAmount + result.marginAmount;
+    const billedLabor = result.socialProvisionIncluded ? result.laborRaw + result.marginRaw : result.laborAmount + result.marginAmount;
+    const finance = (rounded, raw) => formatInternalCurrency(result.socialProvisionIncluded ? raw : rounded);
     const profitability = buildProfitabilityFromState(result);
     const isProfitable =
       profitability.statusKey === "empty" ? "NON DISPONIBLE" : profitability.statusKey === "good" || profitability.statusKey === "strong" ? "OUI" : "NON";
@@ -1063,21 +1134,25 @@
     lines.push(
       "",
       "PRESTATIONS",
-      ...result.detailLines.flatMap((line) => [line.label, formatInternalCurrency(line.amount), ""]).slice(0, -1),
+      ...result.detailLines.flatMap((line) => [line.label, finance(line.amount, line.rawAmount ?? line.amount), ""]).slice(0, -1),
       "",
       "FINANCES",
       "Main-d'œuvre avant marge :",
-      formatInternalCurrency(result.laborAmount),
+      finance(result.laborAmount, result.laborRaw),
       "Marge :",
       formatRatePercent(marginRate),
       "Montant marge :",
-      formatInternalCurrency(result.marginAmount),
+      finance(result.marginAmount, result.marginRaw),
       "Main-d'œuvre facturée :",
       formatInternalCurrency(billedLabor),
       "Fournitures :",
-      formatInternalCurrency(result.suppliesAmount),
+      finance(result.suppliesAmount, result.suppliesRaw),
       "Frais :",
-      formatInternalCurrency(result.feesAmount),
+      finance(result.feesAmount, result.feesRaw),
+      "Prix HT avant provision :",
+      formatInternalCurrency(result.baseTotal),
+      result.socialProvisionIncluded ? "Cotisations + formation (21,5 %) :" : "Cotisations non incluses :",
+      formatInternalCurrency(result.socialProvisionAmount),
       "TOTAL CLIENT :",
       formatInternalCurrency(result.total),
       "",
@@ -1116,7 +1191,9 @@
       "TRAVAUX",
       ...buildCopyRowsText(buildClientCopyRows(result)),
       "",
-      `TOTAL ESTIMÉ : ${formatCurrency(result.total)}`,
+      ...(result.socialProvisionIncluded ? [] : ["Cotisations non incluses", ""]),
+      "",
+      `TOTAL ESTIMÉ HT : ${formatCurrency(result.total)}`,
       "",
       "Estimation à confirmer après vérification du chantier."
     ].join("\n");
@@ -1124,7 +1201,8 @@
 
   function buildPaintingInternalMemoText(result) {
     const state = result.state || {};
-    const billedLabor = result.laborAmount + result.marginAmount;
+    const billedLabor = result.socialProvisionIncluded ? result.laborRaw + result.marginRaw : result.laborAmount + result.marginAmount;
+    const finance = (rounded, raw) => formatInternalCurrency(result.socialProvisionIncluded ? raw : rounded);
 
     return [
       "MÉMO CHANTIER — LL CARRELAGE",
@@ -1134,21 +1212,25 @@
       ...getPaintingSurfaceLines(state),
       "",
       "PRESTATIONS",
-      ...result.detailLines.flatMap((line) => [line.label, formatInternalCurrency(line.amount), ""]).slice(0, -1),
+      ...result.detailLines.flatMap((line) => [line.label, finance(line.amount, line.rawAmount ?? line.amount), ""]).slice(0, -1),
       "",
       "FINANCES",
       "Prestations avant marge :",
-      formatInternalCurrency(result.laborAmount),
+      finance(result.laborAmount, result.laborRaw),
       "Marge :",
       formatRatePercent(state.marginRate),
       "Montant marge :",
-      formatInternalCurrency(result.marginAmount),
+      finance(result.marginAmount, result.marginRaw),
       "Prestations facturées :",
       formatInternalCurrency(billedLabor),
       "Fournitures :",
-      formatInternalCurrency(result.suppliesAmount),
+      finance(result.suppliesAmount, result.suppliesRaw),
       "Frais :",
-      formatInternalCurrency(result.feesAmount),
+      finance(result.feesAmount, result.feesRaw),
+      "Prix HT avant provision :",
+      formatInternalCurrency(result.baseTotal),
+      result.socialProvisionIncluded ? "Cotisations + formation (21,5 %) :" : "Cotisations non incluses :",
+      formatInternalCurrency(result.socialProvisionAmount),
       "TOTAL CLIENT :",
       formatInternalCurrency(result.total),
       "",
@@ -1168,6 +1250,7 @@
       buildPaintingClientCopyText,
       buildPaintingInternalMemoText,
       calculateProfitability,
+      applySocialProvision,
       projectRates,
       paintingRates,
       formatRates,
@@ -1265,6 +1348,7 @@
       travelCost: getInputNumber("travelCost"),
       otherCost: getInputNumber("otherCost"),
       marginRate: numberValue(getCheckedRadio("marginRate") || 0),
+      includeSocialProvision: isChecked("includeSocialProvision"),
       realSuppliesCost: getInputNumber("realSuppliesCost"),
       realTravelCost: getInputNumber("realTravelCost"),
       wasteCost: getInputNumber("wasteCost"),
@@ -1279,6 +1363,15 @@
     if (element) {
       element.textContent = value;
     }
+  }
+
+  function renderSocialProvision(prefix, result) {
+    const id = (name) => prefix ? `${prefix}${name}` : `${name[0].toLowerCase()}${name.slice(1)}`;
+    const baseRow = document.getElementById(id("BaseTotalRow"));
+    if (baseRow) baseRow.hidden = !result.socialProvisionIncluded;
+    setText(id("BaseTotalAmount"), formatCurrency(result.baseTotal));
+    setText(id("SocialProvisionLabel"), result.socialProvisionIncluded ? "Cotisations + formation (21,5 %)" : "Cotisations non incluses");
+    setText(id("SocialProvisionAmount"), result.socialProvisionIncluded ? formatCurrency(result.socialProvisionAmount) : "—");
   }
 
   function formatFormatRate(rate) {
@@ -1312,7 +1405,7 @@
     setText("tileFormatRate", rateText);
   }
 
-  function renderDetails(lines) {
+  function renderDetails(lines, includeSocialProvision) {
     detailList.innerHTML = "";
     const visibleLines = lines.length ? lines : [{ label: "Aucune ligne pour le moment", amount: 0 }];
 
@@ -1321,7 +1414,7 @@
       const label = document.createElement("span");
       const amount = document.createElement("strong");
       label.textContent = line.label;
-      amount.textContent = formatCurrency(line.amount);
+      amount.textContent = formatCurrency(includeSocialProvision ? line.rawAmount ?? line.amount : line.amount);
       item.append(label, amount);
       detailList.appendChild(item);
     });
@@ -1340,7 +1433,7 @@
     });
   }
 
-  function renderPaintingDetails(lines) {
+  function renderPaintingDetails(lines, includeSocialProvision) {
     if (!paintDetailList) return;
 
     paintDetailList.innerHTML = "";
@@ -1351,7 +1444,7 @@
       const label = document.createElement("span");
       const amount = document.createElement("strong");
       label.textContent = line.label;
-      amount.textContent = formatCurrency(line.amount);
+      amount.textContent = formatCurrency(includeSocialProvision ? line.rawAmount ?? line.amount : line.amount);
       item.append(label, amount);
       paintDetailList.appendChild(item);
     });
@@ -1415,7 +1508,8 @@
       suppliesEstimate: getInputNumber("paintSuppliesEstimate"),
       travelCost: getInputNumber("paintTravelCost"),
       otherCost: getInputNumber("paintOtherCost"),
-      marginRate: numberValue(getCheckedRadio("paintMarginRate") || 0)
+      marginRate: numberValue(getCheckedRadio("paintMarginRate") || 0),
+      includeSocialProvision: isChecked("paintIncludeSocialProvision")
     };
   }
 
@@ -1535,13 +1629,15 @@
 
     lastPaintingCalculation = calculatePaintingEstimate(readPaintingState());
     setText("paintTotalAmount", formatCurrency(lastPaintingCalculation.total));
-    setText("paintClientRange", `Fourchette client : ${formatCurrency(lastPaintingCalculation.low)} - ${formatCurrency(lastPaintingCalculation.high)}`);
-    setText("paintLaborAmount", formatCurrency(lastPaintingCalculation.laborAmount));
-    setText("paintSuppliesAmount", formatCurrency(lastPaintingCalculation.suppliesAmount));
-    setText("paintFeesAmount", formatCurrency(lastPaintingCalculation.feesAmount));
-    setText("paintMarginAmount", formatCurrency(lastPaintingCalculation.marginAmount));
+    setText("paintClientRange", `Fourchette client HT : ${formatCurrency(lastPaintingCalculation.low)} - ${formatCurrency(lastPaintingCalculation.high)}`);
+    const paintingAmount = (rounded, raw) => formatCurrency(lastPaintingCalculation.socialProvisionIncluded ? raw : rounded);
+    setText("paintLaborAmount", paintingAmount(lastPaintingCalculation.laborAmount, lastPaintingCalculation.laborRaw));
+    setText("paintSuppliesAmount", paintingAmount(lastPaintingCalculation.suppliesAmount, lastPaintingCalculation.suppliesRaw));
+    setText("paintFeesAmount", paintingAmount(lastPaintingCalculation.feesAmount, lastPaintingCalculation.feesRaw));
+    setText("paintMarginAmount", paintingAmount(lastPaintingCalculation.marginAmount, lastPaintingCalculation.marginRaw));
+    renderSocialProvision("paint", lastPaintingCalculation);
     renderPaintingWarnings(lastPaintingCalculation.warningLines);
-    renderPaintingDetails(lastPaintingCalculation.detailLines);
+    renderPaintingDetails(lastPaintingCalculation.detailLines, lastPaintingCalculation.socialProvisionIncluded);
   }
 
   function resetPaintingEstimator() {
@@ -1679,14 +1775,16 @@
     });
 
     setText("totalAmount", formatCurrency(lastCalculation.total));
-    setText("clientRange", `Fourchette client : ${formatCurrency(lastCalculation.low)} - ${formatCurrency(lastCalculation.high)}`);
-    setText("laborAmount", formatCurrency(lastCalculation.laborAmount));
-    setText("suppliesAmount", formatCurrency(lastCalculation.suppliesAmount));
-    setText("feesAmount", formatCurrency(lastCalculation.feesAmount));
-    setText("marginAmount", formatCurrency(lastCalculation.marginAmount));
+    setText("clientRange", `Fourchette client HT : ${formatCurrency(lastCalculation.low)} - ${formatCurrency(lastCalculation.high)}`);
+    const amount = (rounded, raw) => formatCurrency(lastCalculation.socialProvisionIncluded ? raw : rounded);
+    setText("laborAmount", amount(lastCalculation.laborAmount, lastCalculation.laborRaw));
+    setText("suppliesAmount", amount(lastCalculation.suppliesAmount, lastCalculation.suppliesRaw));
+    setText("feesAmount", amount(lastCalculation.feesAmount, lastCalculation.feesRaw));
+    setText("marginAmount", amount(lastCalculation.marginAmount, lastCalculation.marginRaw));
+    renderSocialProvision("", lastCalculation);
     renderTileFormatInfo(lastCalculation.tileFormatInfo, lastCalculation.project.kind);
     renderWarnings(lastCalculation.warningLines);
-    renderDetails(lastCalculation.detailLines);
+    renderDetails(lastCalculation.detailLines, lastCalculation.socialProvisionIncluded);
     renderProfitability(profitability);
   }
 

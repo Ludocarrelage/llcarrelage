@@ -10,6 +10,7 @@ const {
   buildPaintingClientCopyText,
   buildPaintingInternalMemoText,
   calculateProfitability,
+  applySocialProvision,
   projectRates,
   paintingRates,
   formatRates,
@@ -317,7 +318,7 @@ forbiddenClientWords.forEach((word) => {
   assert(!clientText.includes(word), `client text leaks ${word}`);
 });
 assert(clientText.includes("Carrelage : 80 × 80 cm"));
-assert(clientText.includes(`TOTAL ESTIMÉ : ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(result.total)}`));
+assert(clientText.includes(`TOTAL ESTIMÉ HT : ${new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(result.total)}`));
 assert(!clientText.includes("€/m²"));
 assert(internalMemo.includes("Marge :\n10 %"));
 assert(internalMemo.includes("Montant marge :"));
@@ -765,5 +766,56 @@ result = painting({
 });
 assert(result.warningLines.some((line) => line.includes("pack murs")));
 assert(Number.isFinite(result.total));
+
+// The base is preserved; the 21.5% provision is a component of the final HT
+// price, not a surcharge of 21.5% on the base.
+const fromHundred = applySocialProvision(100, true);
+assert.strictEqual(fromHundred.baseTotal, 100);
+assert.strictEqual(fromHundred.total, 127.39);
+assert.strictEqual(fromHundred.provisionAmount, 27.39);
+assert(Math.abs(fromHundred.provisionRaw - fromHundred.totalRaw * 0.215) < 1e-10);
+assert.notStrictEqual(fromHundred.total, 121.5);
+assert.strictEqual(applySocialProvision(0, true).total, 0);
+assert.strictEqual(applySocialProvision(0, true).provisionAmount, 0);
+assert.strictEqual(applySocialProvision(100.25, true).total, 127.71);
+assert.strictEqual(applySocialProvision(100.25, true).baseTotal, 100.25);
+assert.strictEqual(applySocialProvision(100.25, true).provisionAmount, 27.46);
+
+for (const calculate of [estimate, painting]) {
+  const baseState = calculate === estimate
+    ? { quantity: 0, suppliesEstimate: 100, marginRate: 0 }
+    : { suppliesEstimate: 100, marginRate: 0 };
+  const without = calculate({ ...baseState, includeSocialProvision: false });
+  const withProvision = calculate({ ...baseState, includeSocialProvision: true });
+  assert.strictEqual(without.total, 100);
+  assert.strictEqual(withProvision.baseTotal, 100);
+  assert.strictEqual(withProvision.total, 127.39);
+  assert.strictEqual(withProvision.socialProvisionAmount, 27.39);
+  assert.strictEqual(withProvision.baseTotal + withProvision.socialProvisionAmount, withProvision.total);
+  assert.strictEqual(buildClientCopyRows(withProvision).at(-1).label, "Cotisations + formation (21,5 %)");
+  assert.strictEqual(Number(buildClientCopyRows(withProvision).reduce((sum, row) => sum + row.amount, 0).toFixed(2)), withProvision.total);
+
+  // Recalculate from input for each toggle. No 21.5% can accumulate.
+  for (let cycle = 0; cycle < 5; cycle += 1) {
+    assert.strictEqual(calculate({ ...baseState, includeSocialProvision: true }).total, withProvision.total);
+    assert.strictEqual(calculate({ ...baseState, includeSocialProvision: false }).total, without.total);
+  }
+
+  const changed = calculate({ ...baseState, travelCost: 20, includeSocialProvision: true });
+  assert.strictEqual(changed.baseTotal, 120);
+  assert.strictEqual(changed.total, 152.87);
+  assert.strictEqual(changed.socialProvisionAmount, 32.87);
+  assert.strictEqual(calculate({ ...baseState, travelCost: 20, includeSocialProvision: false }).total, 120);
+  const emptyState = calculate === estimate ? { quantity: 0 } : {};
+  assert.strictEqual(calculate({ ...emptyState, includeSocialProvision: true }).total, 0);
+  assert.strictEqual(calculate({ ...emptyState, includeSocialProvision: true }).socialProvisionAmount, 0);
+}
+
+assert(buildClientCopyText(estimate({ quantity: 0, suppliesEstimate: 100, includeSocialProvision: true })).includes("127,39 €"));
+assert(buildClientCopyText(estimate({ quantity: 0, suppliesEstimate: 100, includeSocialProvision: false })).includes("Cotisations non incluses"));
+assert(buildPaintingClientCopyText(painting({ suppliesEstimate: 100, includeSocialProvision: true })).includes("27,39 €"));
+const tinyEstimate = estimate({ quantity: 0, suppliesEstimate: 0.2, includeSocialProvision: true });
+assert.strictEqual(tinyEstimate.total, 0.25);
+assert.strictEqual(Number(buildClientCopyRows(tinyEstimate).reduce((sum, row) => sum + row.amount, 0).toFixed(2)), 0.25);
 
 console.log("simulateur tests OK");

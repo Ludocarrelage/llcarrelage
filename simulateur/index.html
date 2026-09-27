@@ -9,8 +9,8 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self';" />
   <title>Estimation rapide chantier | LL Carrelage</title>
   <link rel="icon" type="image/png" href="/images/favicon-ll-carrelage-conception.png" />
-  <link rel="stylesheet" href="/simulateur/style.css?v=20260918a" />
-  <script src="/simulateur/simulateur.js?v=20260903-4" defer></script>
+  <link rel="stylesheet" href="/simulateur/style.css?v=20260927a" />
+  <script src="/simulateur/simulateur.js?v=20260927a" defer></script>
 </head>
 <body>
   <main class="estimator-shell" id="simulateur-prive">
@@ -415,9 +415,21 @@
           </div>
         </section>
 
-        <section class="estimator-section internal-section">
+        <section class="estimator-section social-section">
           <div class="section-heading">
             <span>13</span>
+            <h2>Cotisations et formation</h2>
+          </div>
+          <label class="toggle-line social-toggle" for="includeSocialProvision">
+            <input id="includeSocialProvision" type="checkbox" role="switch" checked />
+            <span>Inclure mes cotisations et ma formation (21,5 %)</span>
+          </label>
+          <p class="section-note">Provision comprise dans le prix HT. Elle ne couvre pas l’impôt sur le revenu ni les autres taxes et frais.</p>
+        </section>
+
+        <section class="estimator-section internal-section">
+          <div class="section-heading">
+            <span>14</span>
             <h2>Coûts réels / rentabilité</h2>
           </div>
           <p class="section-note">Ces informations restent internes et ne changent pas le devis client.</p>
@@ -481,7 +493,7 @@
       </form>
 
       <aside class="estimator-card result-panel" aria-live="polite">
-        <p class="result-label">Total estimé</p>
+        <p class="result-label">Total estimé HT</p>
         <output class="total-amount" id="totalAmount">0 €</output>
         <p class="range-text" id="clientRange">Fourchette client : 0 € - 0 €</p>
 
@@ -501,6 +513,14 @@
           <div>
             <span>Marge imprévu</span>
             <strong id="marginAmount">0 €</strong>
+          </div>
+          <div id="baseTotalRow">
+            <span>Prix HT avant provision</span>
+            <strong id="baseTotalAmount">0,00 €</strong>
+          </div>
+          <div class="social-summary-row">
+            <span id="socialProvisionLabel">Cotisations + formation (21,5 %)</span>
+            <strong id="socialProvisionAmount">0,00 €</strong>
           </div>
         </div>
 
@@ -544,7 +564,7 @@
             </div>
           </div>
           <p class="profit-note" id="profitHint">Renseignez le temps estimé pour calculer la rentabilité.</p>
-          <p class="profit-note">Indicateur avant cotisations, impôts et frais généraux de l'entreprise.</p>
+          <p class="profit-note">Indicateur avant impôt sur le revenu et frais généraux de l'entreprise. L'option cotisations, lorsqu'elle est activée, couvre uniquement les cotisations et la formation.</p>
         </div>
       </aside>
     </div>
@@ -931,6 +951,18 @@
             </div>
           </section>
 
+          <section class="estimator-section social-section">
+            <div class="section-heading">
+              <span>12</span>
+              <h2>Cotisations et formation</h2>
+            </div>
+            <label class="toggle-line social-toggle" for="paintIncludeSocialProvision">
+              <input id="paintIncludeSocialProvision" type="checkbox" role="switch" checked />
+              <span>Inclure mes cotisations et ma formation (21,5 %)</span>
+            </label>
+            <p class="section-note">Provision comprise dans le prix HT. Elle ne couvre pas l’impôt sur le revenu ni les autres taxes et frais.</p>
+          </section>
+
           <div class="form-actions">
             <button class="btn btn-secondary" id="paintResetButton" type="button">Réinitialiser peinture</button>
             <button class="btn btn-primary" id="paintCopyEstimateButton" type="button">Copier pour le client</button>
@@ -940,7 +972,7 @@
         </form>
 
         <aside class="estimator-card result-panel" aria-live="polite">
-          <p class="result-label">Total estimé peinture</p>
+          <p class="result-label">Total estimé HT peinture</p>
           <output class="total-amount" id="paintTotalAmount">0 €</output>
           <p class="range-text" id="paintClientRange">Fourchette client : 0 € - 0 €</p>
 
@@ -960,6 +992,14 @@
             <div>
               <span>Marge imprévu</span>
               <strong id="paintMarginAmount">0 €</strong>
+            </div>
+            <div id="paintBaseTotalRow">
+              <span>Prix HT avant provision</span>
+              <strong id="paintBaseTotalAmount">0,00 €</strong>
+            </div>
+            <div class="social-summary-row">
+              <span id="paintSocialProvisionLabel">Cotisations + formation (21,5 %)</span>
+              <strong id="paintSocialProvisionAmount">0,00 €</strong>
             </div>
           </div>
 
