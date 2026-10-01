@@ -792,7 +792,7 @@ for (const calculate of [estimate, painting]) {
   assert.strictEqual(withProvision.total, 127.39);
   assert.strictEqual(withProvision.socialProvisionAmount, 27.39);
   assert.strictEqual(withProvision.baseTotal + withProvision.socialProvisionAmount, withProvision.total);
-  assert.strictEqual(buildClientCopyRows(withProvision).at(-1).label, "Cotisations + formation (21,5 %)");
+  assert.strictEqual(buildClientCopyRows(withProvision).at(-1).label, "Cotisations URSSAF (21,5 %)");
   assert.strictEqual(Number(buildClientCopyRows(withProvision).reduce((sum, row) => sum + row.amount, 0).toFixed(2)), withProvision.total);
 
   // Recalculate from input for each toggle. No 21.5% can accumulate.

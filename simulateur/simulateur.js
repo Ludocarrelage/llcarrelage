@@ -1053,7 +1053,7 @@
 
     if (result.socialProvisionIncluded) {
       adjustRowsToCents(rows, result.baseTotal);
-      rows.push({ label: "Cotisations + formation (21,5 %)", amount: result.socialProvisionAmount });
+      rows.push({ label: "Cotisations URSSAF (21,5 %)", amount: result.socialProvisionAmount });
       return rows;
     }
 
@@ -1151,7 +1151,7 @@
       finance(result.feesAmount, result.feesRaw),
       "Prix HT avant provision :",
       formatInternalCurrency(result.baseTotal),
-      result.socialProvisionIncluded ? "Cotisations + formation (21,5 %) :" : "Cotisations non incluses :",
+      result.socialProvisionIncluded ? "Cotisations URSSAF (21,5 %) :" : "Cotisations non incluses :",
       formatInternalCurrency(result.socialProvisionAmount),
       "TOTAL CLIENT :",
       formatInternalCurrency(result.total),
@@ -1229,7 +1229,7 @@
       finance(result.feesAmount, result.feesRaw),
       "Prix HT avant provision :",
       formatInternalCurrency(result.baseTotal),
-      result.socialProvisionIncluded ? "Cotisations + formation (21,5 %) :" : "Cotisations non incluses :",
+      result.socialProvisionIncluded ? "Cotisations URSSAF (21,5 %) :" : "Cotisations non incluses :",
       formatInternalCurrency(result.socialProvisionAmount),
       "TOTAL CLIENT :",
       formatInternalCurrency(result.total),
@@ -1370,7 +1370,7 @@
     const baseRow = document.getElementById(id("BaseTotalRow"));
     if (baseRow) baseRow.hidden = !result.socialProvisionIncluded;
     setText(id("BaseTotalAmount"), formatCurrency(result.baseTotal));
-    setText(id("SocialProvisionLabel"), result.socialProvisionIncluded ? "Cotisations + formation (21,5 %)" : "Cotisations non incluses");
+    setText(id("SocialProvisionLabel"), result.socialProvisionIncluded ? "Cotisations URSSAF (21,5 %)" : "Cotisations non incluses");
     setText(id("SocialProvisionAmount"), result.socialProvisionIncluded ? formatCurrency(result.socialProvisionAmount) : "—");
   }
 
