@@ -2,7 +2,8 @@
   "use strict";
 
   const MINIMUM_INTERVENTION = 80;
-  const SOCIAL_PROVISION_RATE = 0.215;
+  const profitEngine = typeof module !== "undefined" && module.exports ? require("./profit-engine.js") : window.LLProfitEngine;
+  const SOCIAL_PROVISION_RATE = profitEngine.socialRate;
   const DEFAULT_HOURLY_TARGET = 40;
   const HOURLY_TARGET_STORAGE_KEY = "llcarrelage_hourly_target";
 
@@ -1015,9 +1016,41 @@
     return rows.map((row, index) => ({ label: row.label, amount: shares[index].cents / 100 }));
   }
 
+  function analyzeJob(result, params) {
+    const required = ["monthlyFixed", "billableDays", "targetDaily", "jobDays", "estimatedHours", "realSuppliesCost", "realTravelCost", "consumablesCost", "wasteCost", "otherRealCost"];
+    if (required.some(key => params[key] === "" || params[key] == null || !Number.isFinite(Number(params[key])) || Number(params[key]) < 0) || +params.jobDays <= 0 || +params.billableDays <= 0 || +params.estimatedHours <= 0) return null;
+    const values = Object.fromEntries(required.map(key => [key, Number(params[key])]));
+    return profitEngine.calculate({...values, price: result.total, hours: values.estimatedHours,
+      direct: values.realSuppliesCost + values.realTravelCost + values.consumablesCost + values.wasteCost + values.otherRealCost});
+  }
+
+  function adjustJob(result, params) {
+    const analysis = analyzeJob(result, params);
+    if (!analysis || result.total <= 0) return result;
+    const total = Math.max(result.total, analysis.targetPrice);
+    return {...result, initialTotal: result.initialTotal ?? result.total, total,
+      low: roundCents(total * 0.95), high: roundCents(total * 1.1), jobAnalysis: analyzeJob({...result, total}, params)};
+  }
+
+  function jobAnalysisLines(r) {
+    return [
+      `Prix du devis : ${formatInternalCurrency(r.price)}`,
+      `Coûts directs réels : ${formatInternalCurrency(r.direct)}`,
+      `Frais fixes affectés : ${formatInternalCurrency(r.fixed)}`,
+      `Durée du chantier : ${formatQuantity(r.jobDays)} jours`,
+      `Résultat estimé avant impôt : ${formatInternalCurrency(r.result)}`,
+      `Résultat journalier : ${formatInternalCurrency(r.daily)}`,
+      `Résultat horaire : ${formatInternalCurrency(r.hourly)}`,
+      `Objectif journalier : ${formatInternalCurrency(r.targetDaily)}`,
+      `Écart journalier : ${formatInternalCurrency(r.daily-r.targetDaily)}`,
+      r.daily >= r.targetDaily ? "Objectif atteint" : "Objectif non atteint"
+    ];
+  }
+
   function buildMemoTotals(result) {
     // Both simulators bill HT and have no VAT calculation.
     return [
+      ...(result.jobAnalysis ? ["", "RENTABILITÉ ESTIMÉE AVANT IMPÔT", ...jobAnalysisLines(result.jobAnalysis)] : []),
       "",
       `Total devis : ${formatInternalCurrency(result.total)}`,
       `Cotisations URSSAF (21,5 %) : ${formatInternalCurrency(roundCents(result.total * SOCIAL_PROVISION_RATE))}`
@@ -1116,10 +1149,11 @@
       formatInternalCurrency(result.baseTotal),
       "Provision intégrée au devis :",
       formatInternalCurrency(result.socialProvisionAmount),
+      ...(result.initialTotal != null ? [`Ajustement de rentabilité : ${formatInternalCurrency(roundCents(result.total-result.initialTotal))}`] : []),
       "TOTAL CLIENT :",
       formatInternalCurrency(result.total),
       "",
-      "RENTABILITÉ",
+      ...(result.jobIntegrated ? ["RENTABILITÉ", result.jobAnalysis ? "Analyse détaillée ci-dessous." : "À compléter : coûts réels et paramètres manquants."] : ["RENTABILITÉ",
       "Coût réel estimé :",
       formatInternalCurrency(profitability.directCosts),
       "Temps estimé :",
@@ -1131,7 +1165,7 @@
       "Rentabilité :",
       profitability.status,
       "CHANTIER RENTABLE :",
-      isProfitable,
+      isProfitable]),
       ...buildMemoTotals(result)
     );
 
@@ -1194,17 +1228,20 @@
       formatInternalCurrency(result.baseTotal),
       "Provision intégrée au devis :",
       formatInternalCurrency(result.socialProvisionAmount),
+      ...(result.initialTotal != null ? [`Ajustement de rentabilité : ${formatInternalCurrency(roundCents(result.total-result.initialTotal))}`] : []),
       "TOTAL CLIENT :",
       formatInternalCurrency(result.total),
       "",
       "RENTABILITÉ",
-      "Non disponible pour le simulateur peinture.",
+      result.jobIntegrated ? (result.jobAnalysis ? "Analyse détaillée ci-dessous." : "À compléter : coûts réels et paramètres manquants.") : "Non disponible pour le simulateur peinture.",
       ...buildMemoTotals(result)
     ].join("\n");
   }
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
+      analyzeJob,
+      adjustJob,
       calculateEstimate,
       calculatePaintingEstimate,
       getTileFormatInfo,
@@ -1258,6 +1295,85 @@
 
   let lastCalculation = calculateEstimate(defaultState);
   let lastPaintingCalculation = calculatePaintingEstimate(paintingDefaultState);
+
+  const jobAdjustments = {"": false, paint: false};
+  function resetJobFields(prefix) {
+    jobAdjustments[prefix] = false;
+    let saved = {};
+    try { saved = JSON.parse(window.localStorage.getItem("ll-job-profit-settings-v1") || "{}"); } catch (_) {}
+    document.querySelector(`[data-profit-prefix="${prefix}"]`).querySelectorAll("[data-profit]").forEach(input => {
+      input.value = ["monthlyFixed", "billableDays", "targetDaily"].includes(input.dataset.profit) && saved && Number.isFinite(saved[input.dataset.profit]) ? saved[input.dataset.profit] : "";
+    });
+  }
+  function renderAdjustedJob(result, prefix) {
+    if (result.initialTotal == null || result.total === result.initialTotal) return;
+    const rows = buildClientCopyRows(result);
+    const supplies = rows.find(row => row.label === "Fournitures")?.amount || 0;
+    const fees = rows.find(row => row.label === "Déplacement / frais")?.amount || 0;
+    const id = suffix => prefix ? prefix + suffix : suffix[0].toLowerCase()+suffix.slice(1);
+    setText(id("LaborAmount"), formatCurrency(result.total-supplies-fees));
+    setText(id("SuppliesAmount"), formatCurrency(supplies));
+    setText(id("FeesAmount"), formatCurrency(fees));
+    setText(id("MarginAmount"), "Comprise dans les prestations");
+    setText(id("SocialProvisionAmount"), "Comprise dans les prestations");
+    const baseRow = document.getElementById(id("BaseTotalRow"));
+    if (baseRow) baseRow.hidden = true;
+    const list = prefix ? paintDetailList : detailList;
+    list.replaceChildren(...rows.map(row => { const li=document.createElement("li"); li.textContent=row.label+" : "+formatCurrency(row.amount); return li; }));
+  }
+  function jobParams(prefix) {
+    const section = document.querySelector(`[data-profit-prefix="${prefix}"]`);
+    return Object.fromEntries([...section.querySelectorAll("[data-profit]")].map(input => [input.dataset.profit, input.value]));
+  }
+  function integrateJob(result, prefix) {
+    const params = jobParams(prefix);
+    if (jobAdjustments[prefix]) result = adjustJob(result, params);
+    result.jobAnalysis = analyzeJob(result, params);
+    result.jobIntegrated = true;
+    const output = document.getElementById(prefix ? "paintIntegratedProfitOutput" : "integratedProfitOutput");
+    const base = result.initialTotal ?? result.total;
+    const text = [`Prix actuel : ${formatCurrency(result.total)}`, `Prix initial : ${formatCurrency(base)}`];
+    if (!result.jobAnalysis) text.push("À compléter : renseignez les paramètres et tous les coûts réels (0 si aucun). Ajustement indisponible.");
+    else text.push(...jobAnalysisLines(result.jobAnalysis), `Cotisations URSSAF (21,5 %) : ${formatCurrency(result.jobAnalysis.social)}`, `Prix cible : ${formatCurrency(result.jobAnalysis.targetPrice)}`);
+    output.replaceChildren(...text.map(line => {const p = document.createElement("p"); p.textContent = line; return p;}));
+    return result;
+  }
+  function initIntegratedProfit() {
+    const permanent = ["monthlyFixed", "billableDays", "targetDaily"];
+    const key = "ll-job-profit-settings-v1";
+    let saved = {};
+    try { saved = JSON.parse(window.localStorage.getItem(key) || "{}"); } catch (_) {}
+    document.querySelectorAll("[data-profit]").forEach(input => {
+      if (permanent.includes(input.dataset.profit) && saved && Number.isFinite(saved[input.dataset.profit]) && saved[input.dataset.profit] >= 0) input.value = saved[input.dataset.profit];
+      input.addEventListener("input", () => {
+        if (permanent.includes(input.dataset.profit)) {
+          document.querySelectorAll(`[data-profit="${input.dataset.profit}"]`).forEach(other => other.value = input.value);
+          const values = Object.fromEntries(permanent.map(name => [name, document.querySelector(`[data-profit="${name}"]`).value]));
+          try { window.localStorage.setItem(key, JSON.stringify(Object.fromEntries(Object.entries(values).filter(([,v]) => v !== "").map(([k,v]) => [k, Number(v)])))); } catch (_) {}
+        }
+        jobAdjustments[""] = jobAdjustments.paint = false;
+        updateEstimate(); updatePaintingEstimate();
+      });
+    });
+    document.querySelectorAll("[data-profit-adjust], [data-profit-undo]").forEach(button => button.addEventListener("click", () => {
+      const prefix = button.dataset.profitAdjust ?? button.dataset.profitUndo;
+      const current = prefix ? lastPaintingCalculation : lastCalculation;
+      if (button.hasAttribute("data-profit-adjust") && (!analyzeJob(current, jobParams(prefix)) || current.total <= 0)) {
+        document.querySelector(`[data-profit-prefix="${prefix}"]`).open = true;
+        if (current.total <= 0) document.getElementById(prefix ? "paintIntegratedProfitOutput" : "integratedProfitOutput").textContent = "Renseignez au moins une prestation facturée avant l’ajustement.";
+        return;
+      }
+      jobAdjustments[prefix] = button.hasAttribute("data-profit-adjust");
+      prefix ? updatePaintingEstimate() : updateEstimate();
+    }));
+    document.querySelectorAll("[data-profit-reset]").forEach(button => button.addEventListener("click", () => {
+      if (!window.confirm("Réinitialiser les frais fixes, jours facturables et objectif journalier enregistrés ?")) return;
+      try { window.localStorage.removeItem(key); } catch (_) {}
+      document.querySelectorAll("[data-profit]").forEach(input => {if (permanent.includes(input.dataset.profit)) input.value = "";});
+      jobAdjustments[""] = jobAdjustments.paint = false;
+      updateEstimate(); updatePaintingEstimate();
+    }));
+  }
 
   function getCheckedRadio(name) {
     const checked = document.querySelector(`input[name="${name}"]:checked`);
@@ -1591,7 +1707,7 @@
   function updatePaintingEstimate() {
     if (!paintingForm) return;
 
-    lastPaintingCalculation = calculatePaintingEstimate(readPaintingState());
+    lastPaintingCalculation = integrateJob(calculatePaintingEstimate(readPaintingState()), "paint");
     setText("paintTotalAmount", formatCurrency(lastPaintingCalculation.total));
     setText("paintClientRange", `Fourchette client HT : ${formatCurrency(lastPaintingCalculation.low)} - ${formatCurrency(lastPaintingCalculation.high)}`);
     const paintingAmount = (rounded, raw) => formatCurrency(lastPaintingCalculation.socialProvisionIncluded ? raw : rounded);
@@ -1602,12 +1718,14 @@
     renderSocialProvision("paint", lastPaintingCalculation);
     renderPaintingWarnings(lastPaintingCalculation.warningLines);
     renderPaintingDetails(lastPaintingCalculation.detailLines, lastPaintingCalculation.socialProvisionIncluded);
+    renderAdjustedJob(lastPaintingCalculation, "paint");
   }
 
   function resetPaintingEstimator() {
     if (!paintingForm) return;
 
     paintingForm.reset();
+    resetJobFields("paint");
     syncPaintingSurfaceVisibility();
     syncPaintingSurfaceFields();
     updatePaintSupportHint();
@@ -1664,10 +1782,12 @@
     updatePaintingEstimate();
 
     paintingForm.addEventListener("input", () => {
+      jobAdjustments.paint = false;
       updatePaintingEstimate();
     });
 
     paintingForm.addEventListener("change", (event) => {
+      jobAdjustments.paint = false;
       const target = event.target;
 
       if (target && target.name === "paintSurfaceType") {
@@ -1699,44 +1819,10 @@
     });
   }
 
-  function renderProfitability(profitability) {
-    const status = document.getElementById("profitabilityStatus");
-
-    if (status) {
-      status.textContent = profitability.status;
-      status.dataset.status = profitability.statusKey;
-    }
-
-    setText("directCostsAmount", formatCurrency(profitability.directCosts));
-    setText("remainingAfterCosts", formatInternalCurrency(profitability.remainingAfterCosts));
-    setText(
-      "hourlyYield",
-      profitability.hourlyYield === null ? "À renseigner" : `${formatInternalCurrency(profitability.hourlyYield)}/h`
-    );
-    setText("profitTarget", `${formatQuantity(profitability.hourlyTarget)} €/h`);
-    setText(
-      "minimumObjectivePrice",
-      profitability.minimumObjectivePrice === null ? "À renseigner" : formatInternalCurrency(profitability.minimumObjectivePrice)
-    );
-    setText(
-      "objectiveGap",
-      profitability.objectiveGap === null ? "À renseigner" : formatInternalCurrency(profitability.objectiveGap, true)
-    );
-    setText("profitHint", profitability.message);
-  }
-
   function updateEstimate() {
     const state = readState();
-    lastCalculation = calculateEstimate(state);
-    const profitability = calculateProfitability({
-      totalClient: lastCalculation.total,
-      realSuppliesCost: state.realSuppliesCost,
-      realTravelCost: state.realTravelCost,
-      wasteCost: state.wasteCost,
-      otherRealCost: state.otherRealCost,
-      estimatedHours: state.estimatedHours,
-      hourlyTarget: state.hourlyTarget
-    });
+    lastCalculation = integrateJob(calculateEstimate(state), "");
+
 
     setText("totalAmount", formatCurrency(lastCalculation.total));
     setText("clientRange", `Fourchette client HT : ${formatCurrency(lastCalculation.low)} - ${formatCurrency(lastCalculation.high)}`);
@@ -1749,7 +1835,8 @@
     renderTileFormatInfo(lastCalculation.tileFormatInfo, lastCalculation.project.kind);
     renderWarnings(lastCalculation.warningLines);
     renderDetails(lastCalculation.detailLines, lastCalculation.socialProvisionIncluded);
-    renderProfitability(profitability);
+    renderAdjustedJob(lastCalculation, "");
+
   }
 
   function updateQuantityLabels() {
@@ -1945,6 +2032,7 @@
 
   function resetEstimator() {
     form.reset();
+    resetJobFields("");
     applyStoredHourlyTarget();
     updateQuantityLabels();
     toggleSections();
@@ -2010,6 +2098,7 @@
     updateEstimate();
 
     form.addEventListener("input", (event) => {
+      jobAdjustments[""] = false;
       if (event.target && event.target.id === "hourlyTarget") {
         saveHourlyTarget();
       }
@@ -2018,6 +2107,7 @@
     });
 
     form.addEventListener("change", (event) => {
+      jobAdjustments[""] = false;
       const target = event.target;
 
       if (target === projectSelect) {
@@ -2068,5 +2158,6 @@
     updateEstimate
   };
 
+  initIntegratedProfit();
   initEstimator();
 })();

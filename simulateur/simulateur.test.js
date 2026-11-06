@@ -868,3 +868,38 @@ const fractional = {
 assert.deepStrictEqual(buildClientCopyRows(fractional).map((row) => row.amount), [1.28, 1.27, 0, 0]);
 assert.strictEqual(buildClientCopyRows(fractional).length, 4);
 console.log("simulateur tests OK");
+
+// Shared job accounting: exact money, explicit missing costs, and reversible pricing.
+const engine = require('./profit-engine.js');
+const { analyzeJob, adjustJob } = require('./simulateur.js');
+const job = {monthlyFixed:300,billableDays:15,jobDays:4,targetDaily:250,estimatedHours:28,
+  realSuppliesCost:100,realTravelCost:20,consumablesCost:10,wasteCost:0,otherRealCost:0};
+for (const [make, clientCopy, memoCopy] of [
+  [estimate,buildClientCopyText,buildInternalMemoText],
+  [painting,buildPaintingClientCopyText,buildPaintingInternalMemoText]
+]) {
+  for (const includeSocialProvision of [false,true]) {
+    const initial=make({quantity:20,wallPaint:{enabled:true,surface:20},suppliesEstimate:100,travelCost:20,includeSocialProvision});
+    const original=JSON.stringify(initial);
+    const adjusted=adjustJob(initial,job);
+    assert.strictEqual(adjusted.total,1541.41);
+    assert.strictEqual(adjusted.jobAnalysis.fixed,80);
+    assert.strictEqual(adjusted.jobAnalysis.direct,130);
+    assert.strictEqual(adjusted.jobAnalysis.social,331.40);
+    assert.strictEqual(adjusted.jobAnalysis.result,1000.01);
+    assert(adjusted.jobAnalysis.daily>=250);
+    assert.strictEqual(adjustJob(adjusted,job).total,adjusted.total);
+    assert.strictEqual(buildClientCopyRows(adjusted).reduce((sum,row)=>sum+Math.round(row.amount*100),0),154141);
+    assert(!/URSSAF|cotisations|rentabilité|objectif/i.test(clientCopy(adjusted)));
+    assert(memoCopy(adjusted).includes('Résultat estimé avant impôt : 1 000,01 €'));
+    assert.strictEqual(JSON.stringify(initial),original);
+    assert.strictEqual(analyzeJob(initial,{...job,realTravelCost:''}),null);
+    assert.strictEqual(analyzeJob(initial,{...job,jobDays:0}),null);
+    assert.strictEqual(analyzeJob(initial,{...job,billableDays:0}),null);
+    assert.strictEqual(analyzeJob(initial,{...job,estimatedHours:NaN}),null);
+    assert.strictEqual(adjustJob({...initial,total:2000},job).total,2000);
+    const shared=engine.calculate({price:initial.total,direct:130,monthlyFixed:300,billableDays:15,jobDays:4,targetDaily:250,hours:28});
+    assert.deepStrictEqual(analyzeJob(initial,job),shared);
+  }
+}
+console.log('integrated profitability tests OK');

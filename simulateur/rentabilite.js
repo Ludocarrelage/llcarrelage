@@ -9,11 +9,8 @@
     const direct=["tiles","adhesive","grout","consumables","travel","otherCosts"].reduce((sum,id)=>sum+number(id),0);
     const rate=Math.min(100,number("socialRate"))/100;
     const monthlyFixed=number("monthlyFixed"), billableDays=number("billableDays"), jobDays=number("jobDays"), targetDaily=number("targetDaily");
-    const fixed=billableDays>0?monthlyFixed/billableDays*jobDays:0;
-    const social=price*rate, gross=price-direct, result=price-direct-social-fixed;
-    const daily=jobDays>0?result/jobDays:null;
-    const targetPrice=(1-rate)>0?(direct+fixed+targetDaily*jobDays)/(1-rate):null;
-    const netRate=price>0?result/price*100:0;
+    const calculated = window.LLProfitEngine.calculate({price,direct,rate,monthlyFixed,billableDays,jobDays,targetDaily});
+    const {fixed,social,gross,result,daily,targetPrice,netRate} = calculated;
     $("directTotal").textContent=money(direct); $("netResult").textContent=money(result);
     $("dailyResult").textContent=daily===null?"Renseigne la durée du chantier":money(daily)+" par jour";
     $("outPrice").textContent=money(price); $("outDirect").textContent="−"+money(direct); $("outSocial").textContent="−"+money(social); $("outFixed").textContent="−"+money(fixed);
@@ -30,7 +27,7 @@
       const gap=targetPrice-price;
       $("targetDifference").textContent=gap>0?"Augmentation nécessaire : "+money(gap):"Le devis dépasse le prix cible de "+money(Math.abs(gap))+".";
     }
-    return {price,direct,rate,social,fixed,gross,result,daily,targetDaily,targetPrice,netRate,jobDays,billableDays};
+    return calculated;
   }
   function summary(){
     const r=calculate();
