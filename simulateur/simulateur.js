@@ -1017,10 +1017,12 @@
   }
 
   function analyzeJob(result, params) {
-    const required = ["monthlyFixed", "billableDays", "targetDaily", "jobDays", "estimatedHours", "realSuppliesCost", "realTravelCost", "consumablesCost", "wasteCost", "otherRealCost"];
-    if (required.some(key => params[key] === "" || params[key] == null || !Number.isFinite(Number(params[key])) || Number(params[key]) < 0) || +params.jobDays <= 0 || +params.billableDays <= 0 || +params.estimatedHours <= 0) return null;
-    const values = Object.fromEntries(required.map(key => [key, Number(params[key])]));
-    return profitEngine.calculate({...values, price: result.total, hours: values.estimatedHours,
+    const clientSupplies = ["clientAll", "client"].includes(result.state?.suppliesType);
+    const input = {...params, realSuppliesCost: clientSupplies ? 0 : params.realSuppliesCost};
+    const required = ["monthlyFixed", "billableDays", "targetDaily", "jobDays", "hoursPerDay", "safetyPercent", "realSuppliesCost", "realTravelCost", "consumablesCost", "wasteCost", "otherRealCost"];
+    if (required.some(key => input[key] === "" || input[key] == null || !Number.isFinite(Number(input[key])) || Number(input[key]) < 0) || +input.jobDays <= 0 || +input.billableDays <= 0 || +input.hoursPerDay <= 0) return null;
+    const values = Object.fromEntries(required.map(key => [key, Number(input[key])]));
+    return profitEngine.calculate({...values, price: result.total, hours: values.hoursPerDay * values.jobDays, safetyRate: values.safetyPercent / 100,
       direct: values.realSuppliesCost + values.realTravelCost + values.consumablesCost + values.wasteCost + values.otherRealCost});
   }
 
@@ -1036,14 +1038,16 @@
     return [
       `Prix du devis : ${formatInternalCurrency(r.price)}`,
       `Coûts directs réels : ${formatInternalCurrency(r.direct)}`,
+      `Réserve de sécurité : ${formatInternalCurrency(r.reserve)}`,
       `Frais fixes affectés : ${formatInternalCurrency(r.fixed)}`,
       `Durée du chantier : ${formatQuantity(r.jobDays)} jours`,
       `Résultat estimé avant impôt : ${formatInternalCurrency(r.result)}`,
       `Résultat journalier : ${formatInternalCurrency(r.daily)}`,
       `Résultat horaire : ${formatInternalCurrency(r.hourly)}`,
       `Objectif journalier : ${formatInternalCurrency(r.targetDaily)}`,
+      `Écart à l’objectif du chantier : ${formatInternalCurrency(r.result-r.targetDaily*r.jobDays)}`,
       `Écart journalier : ${formatInternalCurrency(r.daily-r.targetDaily)}`,
-      r.daily >= r.targetDaily ? "Objectif atteint" : "Objectif non atteint"
+      r.daily >= r.targetDaily ? "OBJECTIF ATTEINT" : "OBJECTIF NON ATTEINT"
     ];
   }
 
@@ -1129,10 +1133,10 @@
 
     lines.push(
       "",
-      "PRESTATIONS",
+      ...(result.initialTotal != null ? ["PRESTATIONS FACTURÉES", ...buildCopyRowsText(buildClientCopyRows(result)), "", "PRESTATIONS DE RÉFÉRENCE"] : ["PRESTATIONS"]),
       ...result.detailLines.flatMap((line) => [line.label, finance(line.amount, line.rawAmount ?? line.amount), ""]).slice(0, -1),
       "",
-      "FINANCES",
+      result.initialTotal != null ? "FINANCES DE RÉFÉRENCE (AVANT AJUSTEMENT)" : "FINANCES",
       "Main-d'œuvre avant marge :",
       finance(result.laborAmount, result.laborRaw),
       "Marge :",
@@ -1208,10 +1212,10 @@
       `Type de surface : ${result.surfaceLabel}`,
       ...getPaintingSurfaceLines(state),
       "",
-      "PRESTATIONS",
+      ...(result.initialTotal != null ? ["PRESTATIONS FACTURÉES", ...buildCopyRowsText(buildClientCopyRows(result)), "", "PRESTATIONS DE RÉFÉRENCE"] : ["PRESTATIONS"]),
       ...result.detailLines.flatMap((line) => [line.label, finance(line.amount, line.rawAmount ?? line.amount), ""]).slice(0, -1),
       "",
-      "FINANCES",
+      result.initialTotal != null ? "FINANCES DE RÉFÉRENCE (AVANT AJUSTEMENT)" : "FINANCES",
       "Prestations avant marge :",
       finance(result.laborAmount, result.laborRaw),
       "Marge :",
@@ -1302,7 +1306,7 @@
     let saved = {};
     try { saved = JSON.parse(window.localStorage.getItem("ll-job-profit-settings-v1") || "{}"); } catch (_) {}
     document.querySelector(`[data-profit-prefix="${prefix}"]`).querySelectorAll("[data-profit]").forEach(input => {
-      input.value = ["monthlyFixed", "billableDays", "targetDaily"].includes(input.dataset.profit) && saved && Number.isFinite(saved[input.dataset.profit]) ? saved[input.dataset.profit] : "";
+      input.value = Object.hasOwn(profitEngine.defaults, input.dataset.profit) ? profitEngine.settings(saved)[input.dataset.profit] : "";
     });
   }
   function renderAdjustedJob(result, prefix) {
@@ -1326,6 +1330,13 @@
     return Object.fromEntries([...section.querySelectorAll("[data-profit]")].map(input => [input.dataset.profit, input.value]));
   }
   function integrateJob(result, prefix) {
+    const section = document.querySelector(`[data-profit-prefix="${prefix}"]`);
+    const materials = section.querySelector('[data-profit="realSuppliesCost"]');
+    const clientSupplies = ["clientAll", "client"].includes(result.state.suppliesType);
+    materials.disabled = clientSupplies;
+    section.querySelector("[data-materials-hint]").textContent = clientSupplies
+      ? "Le client fournit les matériaux : aucun achat de ces matériaux imputé à l’entreprise. Les consommables et autres dépenses restent à renseigner."
+      : "L’entreprise fournit des matériaux : renseignez leur coût réel d’achat, distinct du prix facturé. Le coût déjà saisi est réutilisé.";
     const params = jobParams(prefix);
     if (jobAdjustments[prefix]) result = adjustJob(result, params);
     result.jobAnalysis = analyzeJob(result, params);
@@ -1333,18 +1344,18 @@
     const output = document.getElementById(prefix ? "paintIntegratedProfitOutput" : "integratedProfitOutput");
     const base = result.initialTotal ?? result.total;
     const text = [`Prix actuel : ${formatCurrency(result.total)}`, `Prix initial : ${formatCurrency(base)}`];
-    if (!result.jobAnalysis) text.push("À compléter : renseignez les paramètres et tous les coûts réels (0 si aucun). Ajustement indisponible.");
+    if (!result.jobAnalysis) text.push("RENTABILITÉ À COMPLÉTER — renseignez les paramètres et tous les coûts réels (0 si aucun). Ajustement indisponible.");
     else text.push(...jobAnalysisLines(result.jobAnalysis), `Cotisations URSSAF (21,5 %) : ${formatCurrency(result.jobAnalysis.social)}`, `Prix cible : ${formatCurrency(result.jobAnalysis.targetPrice)}`);
     output.replaceChildren(...text.map(line => {const p = document.createElement("p"); p.textContent = line; return p;}));
     return result;
   }
   function initIntegratedProfit() {
-    const permanent = ["monthlyFixed", "billableDays", "targetDaily"];
+    const permanent = Object.keys(profitEngine.defaults);
     const key = "ll-job-profit-settings-v1";
     let saved = {};
     try { saved = JSON.parse(window.localStorage.getItem(key) || "{}"); } catch (_) {}
     document.querySelectorAll("[data-profit]").forEach(input => {
-      if (permanent.includes(input.dataset.profit) && saved && Number.isFinite(saved[input.dataset.profit]) && saved[input.dataset.profit] >= 0) input.value = saved[input.dataset.profit];
+      if (permanent.includes(input.dataset.profit)) input.value = profitEngine.settings(saved)[input.dataset.profit];
       input.addEventListener("input", () => {
         if (permanent.includes(input.dataset.profit)) {
           document.querySelectorAll(`[data-profit="${input.dataset.profit}"]`).forEach(other => other.value = input.value);
@@ -1367,9 +1378,9 @@
       prefix ? updatePaintingEstimate() : updateEstimate();
     }));
     document.querySelectorAll("[data-profit-reset]").forEach(button => button.addEventListener("click", () => {
-      if (!window.confirm("Réinitialiser les frais fixes, jours facturables et objectif journalier enregistrés ?")) return;
+      if (!window.confirm("Restaurer les paramètres par défaut : 300 €, 20 jours, 150 €/jour, 7 h/jour et 10 % de sécurité ?")) return;
       try { window.localStorage.removeItem(key); } catch (_) {}
-      document.querySelectorAll("[data-profit]").forEach(input => {if (permanent.includes(input.dataset.profit)) input.value = "";});
+      document.querySelectorAll("[data-profit]").forEach(input => {if (permanent.includes(input.dataset.profit)) input.value = profitEngine.defaults[input.dataset.profit];});
       jobAdjustments[""] = jobAdjustments.paint = false;
       updateEstimate(); updatePaintingEstimate();
     }));
