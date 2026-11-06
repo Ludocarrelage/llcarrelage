@@ -872,14 +872,14 @@ console.log("simulateur tests OK");
 // Shared job accounting: exact money, explicit missing costs, and reversible pricing.
 const engine = require('./profit-engine.js');
 const { analyzeJob, adjustJob } = require('./simulateur.js');
-const job = {monthlyFixed:300,billableDays:15,jobDays:4,targetDaily:250,estimatedHours:28,
+const job = {monthlyFixed:300,billableDays:15,jobDays:4,targetDaily:250,hoursPerDay:7,safetyPercent:0,
   realSuppliesCost:100,realTravelCost:20,consumablesCost:10,wasteCost:0,otherRealCost:0};
 for (const [make, clientCopy, memoCopy] of [
   [estimate,buildClientCopyText,buildInternalMemoText],
   [painting,buildPaintingClientCopyText,buildPaintingInternalMemoText]
 ]) {
   for (const includeSocialProvision of [false,true]) {
-    const initial=make({quantity:20,wallPaint:{enabled:true,surface:20},suppliesEstimate:100,travelCost:20,includeSocialProvision});
+    const initial=make({quantity:20,wallPaint:{enabled:true,surface:20},suppliesEstimate:100,travelCost:20,suppliesType:make === estimate ? "allSupplies" : "artisan",includeSocialProvision});
     const original=JSON.stringify(initial);
     const adjusted=adjustJob(initial,job);
     assert.strictEqual(adjusted.total,1541.41);
@@ -896,10 +896,44 @@ for (const [make, clientCopy, memoCopy] of [
     assert.strictEqual(analyzeJob(initial,{...job,realTravelCost:''}),null);
     assert.strictEqual(analyzeJob(initial,{...job,jobDays:0}),null);
     assert.strictEqual(analyzeJob(initial,{...job,billableDays:0}),null);
-    assert.strictEqual(analyzeJob(initial,{...job,estimatedHours:NaN}),null);
+    assert.strictEqual(analyzeJob(initial,{...job,hoursPerDay:NaN}),null);
     assert.strictEqual(adjustJob({...initial,total:2000},job).total,2000);
     const shared=engine.calculate({price:initial.total,direct:130,monthlyFixed:300,billableDays:15,jobDays:4,targetDaily:250,hours:28});
     assert.deepStrictEqual(analyzeJob(initial,job),shared);
   }
 }
 console.log('integrated profitability tests OK');
+
+assert.deepStrictEqual(engine.settings(null), {monthlyFixed:300,billableDays:20,targetDaily:150,hoursPerDay:7,safetyPercent:10});
+assert.deepStrictEqual(engine.settings({monthlyFixed:500,targetDaily:200,hoursPerDay:8,safetyPercent:0,billableDays:18}), {monthlyFixed:500,targetDaily:200,hoursPerDay:8,safetyPercent:0,billableDays:18});
+assert.strictEqual(engine.settings({billableDays:0}).billableDays,20);
+const defaultsJob={...engine.defaults,jobDays:4,realSuppliesCost:100,realTravelCost:20,consumablesCost:10,wasteCost:0,otherRealCost:0};
+for (const [make,copy,memo,artisan,client] of [
+  [estimate,buildClientCopyText,buildInternalMemoText,'allSupplies','clientAll'],
+  [painting,buildPaintingClientCopyText,buildPaintingInternalMemoText,'artisan','client']
+]) {
+ const quote=make({quantity:10,wallPaint:{enabled:true,surface:10},suppliesType:artisan,includeSocialProvision:true});
+ const analysis=analyzeJob({...quote,total:1500},defaultsJob);
+ assert.strictEqual(analysis.fixed,60);
+ assert.strictEqual(analysis.reserve,13);
+ assert.strictEqual(analysis.result,974.5);
+ assert.strictEqual(analysis.hourly,974.5/28);
+ const adjusted=adjustJob(quote,defaultsJob);
+ assert.strictEqual(adjusted.total,1022.93);
+ assert.strictEqual(adjusted.jobAnalysis.result,600);
+ assert.strictEqual(adjusted.jobAnalysis.social,219.93);
+ assert.strictEqual(adjusted.jobAnalysis.reserve,13);
+ assert.strictEqual(adjustJob(adjusted,defaultsJob).total,1022.93);
+ assert.strictEqual(buildClientCopyRows(adjusted).reduce((sum,row)=>sum+Math.round(row.amount*100),0),102293);
+ assert(!/URSSAF|sécurité|objectif|résultat|coûts/i.test(copy(adjusted)));
+ assert(memo(adjusted).includes('Réserve de sécurité : 13,00 €'));
+ assert(memo(adjusted).includes('Écart à l’objectif du chantier : 0,00 €'));
+ const clientQuote={...quote,state:{...quote.state,suppliesType:client}};
+ assert.strictEqual(analyzeJob(clientQuote,{...defaultsJob,realSuppliesCost:''}).direct,30);
+ assert.strictEqual(analyzeJob(clientQuote,defaultsJob).reserve,3);
+ assert.strictEqual(analyzeJob(quote,{...defaultsJob,realSuppliesCost:''}),null);
+ assert.strictEqual(analyzeJob({...clientQuote,state:{...clientQuote.state,suppliesType:artisan}},defaultsJob).direct,130);
+ assert.strictEqual(analyzeJob(quote,{...defaultsJob,jobDays:''}),null);
+ assert.strictEqual(analyzeJob(quote,{...defaultsJob,safetyPercent:''}),null);
+}
+console.log('defaults, supply synchronization and safety reserve tests OK');

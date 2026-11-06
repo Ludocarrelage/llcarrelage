@@ -10,8 +10,8 @@
   <title>Estimation rapide chantier | LL Carrelage</title>
   <link rel="icon" type="image/png" href="/images/favicon-ll-carrelage-conception.png" />
   <link rel="stylesheet" href="/simulateur/style.css?v=20261106b" />
-  <script src="/simulateur/profit-engine.js?v=20261106a" defer></script>
-  <script src="/simulateur/simulateur.js?v=20261106b" defer></script>
+  <script src="/simulateur/profit-engine.js?v=20261106c" defer></script>
+  <script src="/simulateur/simulateur.js?v=20261106c" defer></script>
 </head>
 <body>
   <main class="estimator-shell" id="simulateur-prive">
@@ -451,10 +451,15 @@
           <input id="jobDays" data-profit="jobDays" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
-          <label class="field-label" for="estimatedHours">Heures de travail</label>
-          <input id="estimatedHours" data-profit="estimatedHours" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <label class="field-label" for="hoursPerDay">Heures travaillées par jour</label>
+          <input id="hoursPerDay" data-profit="hoursPerDay" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
+          <label class="field-label" for="safetyPercent">Marge de sécurité sur les coûts directs (%)</label>
+          <input id="safetyPercent" data-profit="safetyPercent" type="number" min="0" step="0.1" inputmode="decimal" />
+          </div>
+          <div>
+          <p data-materials-hint class="section-note"></p>
           <label class="field-label" for="realSuppliesCost">Matériaux, colle et joints : coût réel total (€)</label>
           <input id="realSuppliesCost" data-profit="realSuppliesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
@@ -949,10 +954,15 @@
           <input id="paintJobDays" data-profit="jobDays" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
-          <label class="field-label" for="paintEstimatedHours">Heures de travail</label>
-          <input id="paintEstimatedHours" data-profit="estimatedHours" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <label class="field-label" for="paintHoursPerDay">Heures travaillées par jour</label>
+          <input id="paintHoursPerDay" data-profit="hoursPerDay" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
+          <label class="field-label" for="paintSafetyPercent">Marge de sécurité sur les coûts directs (%)</label>
+          <input id="paintSafetyPercent" data-profit="safetyPercent" type="number" min="0" step="0.1" inputmode="decimal" />
+          </div>
+          <div>
+          <p data-materials-hint class="section-note"></p>
           <label class="field-label" for="paintRealSuppliesCost">Matériaux, colle et joints : coût réel total (€)</label>
           <input id="paintRealSuppliesCost" data-profit="realSuppliesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
