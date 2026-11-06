@@ -9,8 +9,9 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; media-src 'none'; object-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self';" />
   <title>Estimation rapide chantier | LL Carrelage</title>
   <link rel="icon" type="image/png" href="/images/favicon-ll-carrelage-conception.png" />
-  <link rel="stylesheet" href="/simulateur/style.css?v=20260927a" />
-  <script src="/simulateur/simulateur.js?v=20261106a" defer></script>
+  <link rel="stylesheet" href="/simulateur/style.css?v=20261106b" />
+  <script src="/simulateur/profit-engine.js?v=20261106a" defer></script>
+  <script src="/simulateur/simulateur.js?v=20261106b" defer></script>
 </head>
 <body>
   <main class="estimator-shell" id="simulateur-prive">
@@ -427,67 +428,60 @@
           <p class="section-note">Provision comprise dans le prix HT. Elle ne couvre pas l’impôt sur le revenu ni les autres taxes et frais.</p>
         </section>
 
-        <section class="estimator-section internal-section">
-          <div class="section-heading">
-            <span>14</span>
-            <h2>Coûts réels / rentabilité</h2>
+<details class="estimator-section internal-section integrated-profit" data-profit-prefix="">
+          <summary>
+          <strong>14. RENTABILITÉ — À COMPLÉTER</strong>
+          </summary>
+          <p class="section-note">Montants facturés récupérés automatiquement. Les prix de vente ne sont pas des dépenses. Complétez chaque coût réel, avec 0 si aucun ; les coûts du chantier ne sont pas sauvegardés.</p>
+          <div class="profit-cost-grid">
+          <div>
+          <label class="field-label" for="monthlyFixed">Frais fixes mensuels (€)</label>
+          <input id="monthlyFixed" data-profit="monthlyFixed" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
-          <p class="section-note">Ces informations restent internes et ne changent pas le devis client.</p>
-          <div class="profit-quick-grid">
-            <div>
-              <label class="field-label" for="estimatedHours">Temps de travail estimé</label>
-              <div class="input-with-unit compact-unit">
-                <input id="estimatedHours" type="number" min="0" step="0.5" inputmode="decimal" value="0" />
-                <span>h</span>
-              </div>
-            </div>
-            <div>
-              <label class="field-label" for="hourlyTarget">Objectif de rentabilité</label>
-              <div class="input-with-unit compact-unit">
-                <input id="hourlyTarget" type="number" min="0" step="1" inputmode="decimal" value="40" />
-                <span>€/h</span>
-              </div>
-            </div>
+          <div>
+          <label class="field-label" for="billableDays">Jours facturables par mois</label>
+          <input id="billableDays" data-profit="billableDays" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
-          <details class="profit-costs">
-            <summary>Afficher les coûts détaillés</summary>
-            <div class="profit-cost-grid">
-              <div>
-                <label class="field-label" for="realSuppliesCost">Coût réel des fournitures</label>
-                <div class="input-with-unit compact-unit">
-                  <input id="realSuppliesCost" type="number" min="0" step="1" inputmode="decimal" value="0" />
-                  <span>€</span>
-                </div>
-              </div>
-              <div>
-                <label class="field-label" for="realTravelCost">Carburant / péage / déplacement réel</label>
-                <div class="input-with-unit compact-unit">
-                  <input id="realTravelCost" type="number" min="0" step="1" inputmode="decimal" value="0" />
-                  <span>€</span>
-                </div>
-              </div>
-              <div>
-                <label class="field-label" for="wasteCost">Déchetterie / évacuation</label>
-                <div class="input-with-unit compact-unit">
-                  <input id="wasteCost" type="number" min="0" step="1" inputmode="decimal" value="0" />
-                  <span>€</span>
-                </div>
-              </div>
-              <div>
-                <label class="field-label" for="otherRealCost">Autres coûts réels</label>
-                <div class="input-with-unit compact-unit">
-                  <input id="otherRealCost" type="number" min="0" step="1" inputmode="decimal" value="0" />
-                  <span>€</span>
-                </div>
-              </div>
-            </div>
+          <div>
+          <label class="field-label" for="targetDaily">Objectif par jour avant impôt (€)</label>
+          <input id="targetDaily" data-profit="targetDaily" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="jobDays">Durée du chantier (jours)</label>
+          <input id="jobDays" data-profit="jobDays" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="estimatedHours">Heures de travail</label>
+          <input id="estimatedHours" data-profit="estimatedHours" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="realSuppliesCost">Matériaux, colle et joints : coût réel total (€)</label>
+          <input id="realSuppliesCost" data-profit="realSuppliesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="realTravelCost">Déplacement et carburant réels (€)</label>
+          <input id="realTravelCost" data-profit="realTravelCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="consumablesCost">Consommables réels (€)</label>
+          <input id="consumablesCost" data-profit="consumablesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="wasteCost">Déchetterie / évacuation (€)</label>
+          <input id="wasteCost" data-profit="wasteCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="otherRealCost">Autres coûts directs réels (€)</label>
+          <input id="otherRealCost" data-profit="otherRealCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          </div>
+          <p>Cotisations : 21,5 % du CA HT, même sans provision. Estimation avant impôt sur le revenu.</p>
+          <button type="button" class="btn btn-secondary" data-profit-reset>Réinitialiser mes paramètres</button>
           </details>
-        </section>
-
         <div class="form-actions">
           <button class="btn btn-secondary" id="resetButton" type="button">Réinitialiser</button>
           <button class="btn btn-primary" id="copyEstimateButton" type="button">Copier pour le client</button>
-          <button class="btn btn-dark" id="copyDetailButton" type="button">Copier mémo pour moi</button>
+          <button class="btn btn-dark" id="copyDetailButton" type="button">Copier mémo pour moi</button><button class="btn btn-primary" type="button" data-profit-adjust="">AJUSTER À MA RENTABILITÉ</button><button class="btn btn-secondary" type="button" data-profit-undo="">Revenir au prix initial</button>
         </div>
         <p class="copy-status" id="copyStatus" role="status" aria-live="polite"></p>
       </form>
@@ -534,38 +528,7 @@
           <ul id="detailList"></ul>
         </div>
 
-        <div class="profit-box">
-          <h2>Rentabilité estimée</h2>
-          <p class="profit-status" id="profitabilityStatus">À compléter</p>
-          <div class="profit-results">
-            <div>
-              <span>Coûts réels directs</span>
-              <strong id="directCostsAmount">0 €</strong>
-            </div>
-            <div>
-              <span>Reste après coûts directs</span>
-              <strong id="remainingAfterCosts">0 €</strong>
-            </div>
-            <div>
-              <span>Rendement estimé</span>
-              <strong id="hourlyYield">À renseigner</strong>
-            </div>
-            <div>
-              <span>Objectif</span>
-              <strong id="profitTarget">40 €/h</strong>
-            </div>
-            <div>
-              <span>Prix minimum objectif</span>
-              <strong id="minimumObjectivePrice">À renseigner</strong>
-            </div>
-            <div>
-              <span>Écart</span>
-              <strong id="objectiveGap">À renseigner</strong>
-            </div>
-          </div>
-          <p class="profit-note" id="profitHint">Renseignez le temps estimé pour calculer la rentabilité.</p>
-          <p class="profit-note">Indicateur avant impôt sur le revenu et frais généraux de l'entreprise. L'option cotisations, lorsqu'elle est activée, couvre uniquement les cotisations URSSAF.</p>
-        </div>
+<div class="profit-box" id="integratedProfitOutput" aria-live="polite"></div>
       </aside>
     </div>
 
@@ -963,10 +926,59 @@
             <p class="section-note">Provision comprise dans le prix HT. Elle ne couvre pas l’impôt sur le revenu ni les autres taxes et frais.</p>
           </section>
 
-          <div class="form-actions">
+<details class="estimator-section internal-section integrated-profit" data-profit-prefix="paint">
+          <summary>
+          <strong>14. RENTABILITÉ — À COMPLÉTER</strong>
+          </summary>
+          <p class="section-note">Montants facturés récupérés automatiquement. Les prix de vente ne sont pas des dépenses. Complétez chaque coût réel, avec 0 si aucun ; les coûts du chantier ne sont pas sauvegardés.</p>
+          <div class="profit-cost-grid">
+          <div>
+          <label class="field-label" for="paintMonthlyFixed">Frais fixes mensuels (€)</label>
+          <input id="paintMonthlyFixed" data-profit="monthlyFixed" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="paintBillableDays">Jours facturables par mois</label>
+          <input id="paintBillableDays" data-profit="billableDays" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="paintTargetDaily">Objectif par jour avant impôt (€)</label>
+          <input id="paintTargetDaily" data-profit="targetDaily" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="paintJobDays">Durée du chantier (jours)</label>
+          <input id="paintJobDays" data-profit="jobDays" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="paintEstimatedHours">Heures de travail</label>
+          <input id="paintEstimatedHours" data-profit="estimatedHours" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="paintRealSuppliesCost">Matériaux, colle et joints : coût réel total (€)</label>
+          <input id="paintRealSuppliesCost" data-profit="realSuppliesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="paintRealTravelCost">Déplacement et carburant réels (€)</label>
+          <input id="paintRealTravelCost" data-profit="realTravelCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="paintConsumablesCost">Consommables réels (€)</label>
+          <input id="paintConsumablesCost" data-profit="consumablesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="paintWasteCost">Déchetterie / évacuation (€)</label>
+          <input id="paintWasteCost" data-profit="wasteCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          <div>
+          <label class="field-label" for="paintOtherRealCost">Autres coûts directs réels (€)</label>
+          <input id="paintOtherRealCost" data-profit="otherRealCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div>
+          </div>
+          <p>Cotisations : 21,5 % du CA HT, même sans provision. Estimation avant impôt sur le revenu.</p>
+          <button type="button" class="btn btn-secondary" data-profit-reset>Réinitialiser mes paramètres</button>
+          </details>          <div class="form-actions">
             <button class="btn btn-secondary" id="paintResetButton" type="button">Réinitialiser peinture</button>
             <button class="btn btn-primary" id="paintCopyEstimateButton" type="button">Copier pour le client</button>
-            <button class="btn btn-dark" id="paintCopyMemoButton" type="button">Copier mémo pour moi</button>
+            <button class="btn btn-dark" id="paintCopyMemoButton" type="button">Copier mémo pour moi</button><button class="btn btn-primary" type="button" data-profit-adjust="paint">AJUSTER À MA RENTABILITÉ</button><button class="btn btn-secondary" type="button" data-profit-undo="paint">Revenir au prix initial</button>
           </div>
           <p class="copy-status" id="paintCopyStatus" role="status" aria-live="polite"></p>
         </form>
@@ -1009,7 +1021,7 @@
           </div>
 
           <div class="detail-box">
-            <h2>Détail peinture</h2>
+            <div id="paintIntegratedProfitOutput" aria-live="polite"></div><h2>Détail peinture</h2>
             <ul id="paintDetailList"></ul>
           </div>
         </aside>
