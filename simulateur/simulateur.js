@@ -990,74 +990,38 @@
     return detail ? `${title} — ${detail}` : title;
   }
 
-  function distributeRoundedTotal(lines, sourceTotal, targetTotal) {
-    const source = roundEuro(sourceTotal);
-    const target = roundEuro(targetTotal);
-    const positiveLines = lines.filter((line) => line.amount > 0);
-
-    if (!positiveLines.length || source <= 0 || target <= 0) {
-      return [];
-    }
-
-    let distributedTotal = 0;
-
-    return positiveLines.map((line, index) => {
-      const isLast = index === positiveLines.length - 1;
-      const amount = isLast ? target - distributedTotal : roundEuro((line.amount / source) * target);
-      distributedTotal += amount;
-
-      return {
-        label: toClientLineLabel(line.label),
-        amount
-      };
-    });
-  }
-
-  function adjustRowsToTotal(rows, expectedTotal) {
-    if (!rows.length) return rows;
-
-    const currentTotal = rows.reduce((sum, row) => sum + row.amount, 0);
-    const difference = roundDisplayEuro(roundEuro(expectedTotal) - currentTotal);
-
-    if (difference !== 0) {
-      const lastRow = rows[rows.length - 1];
-      lastRow.amount = Math.max(0, lastRow.amount + difference);
-    }
-
-    return rows;
-  }
-
-  function adjustRowsToCents(rows, expectedTotal) {
-    if (!rows.length) {
-      if (expectedTotal > 0) rows.push({ label: "Prix HT avant provision", amount: expectedTotal });
-      return rows;
-    }
-    const currentTotal = rows.reduce((sum, row) => sum + row.amount, 0);
-    const largestIndex = rows.reduce((best, row, index) => row.amount > rows[best].amount ? index : best, 0);
-    rows[largestIndex].amount = roundCents(rows[largestIndex].amount + expectedTotal - currentTotal);
-    return rows;
-  }
-
   function buildClientCopyRows(result) {
-    const laborLines = result.detailLines.filter((line) => !isFinanceLine(line));
-    const laborRows = distributeRoundedTotal(laborLines, result.laborAmount, result.laborAmount + result.marginAmount);
-    const rows = [...laborRows];
+    // Use unrounded billable amounts as weights; margin belongs to labor.
+    const laborFactor = result.laborRaw > 0 ? 1 + result.marginRaw / result.laborRaw : 1;
+    const rows = result.detailLines.filter((line) => !isFinanceLine(line)).map((line) => ({
+      label: toClientLineLabel(line.label),
+      amount: (line.rawAmount ?? line.amount) * laborFactor
+    }));
+    if (result.suppliesRaw > 0) rows.push({ label: "Fournitures", amount: result.suppliesRaw });
+    if (result.feesRaw > 0) rows.push({ label: "Déplacement / frais", amount: result.feesRaw });
 
-    if (result.socialProvisionIncluded ? result.suppliesRaw > 0 : result.suppliesAmount > 0) {
-      rows.push({ label: "Fournitures", amount: result.socialProvisionIncluded ? roundCents(result.state.suppliesEstimate) : roundEuro(result.suppliesAmount) });
-    }
+    const source = rows.reduce((sum, row) => sum + row.amount, 0);
+    if (source <= 0) return rows.map((row) => ({ ...row, amount: 0 }));
 
-    if (result.socialProvisionIncluded ? result.feesRaw > 0 : result.feesAmount > 0) {
-      rows.push({ label: "Déplacement / frais", amount: result.socialProvisionIncluded ? roundCents(result.state.travelCost + result.state.otherCost) : roundEuro(result.feesAmount) });
-    }
+    // Largest remainders in integer cents: no negative residual on a small last row.
+    const targetCents = Math.round(result.total * 100);
+    const shares = rows.map((row, index) => {
+      const exact = row.amount / source * targetCents;
+      return { index, cents: Math.floor(exact), remainder: exact - Math.floor(exact) };
+    });
+    const remaining = targetCents - shares.reduce((sum, share) => sum + share.cents, 0);
+    const ranked = [...shares].sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+    for (let index = 0; index < remaining; index += 1) ranked[index].cents += 1;
+    return rows.map((row, index) => ({ label: row.label, amount: shares[index].cents / 100 }));
+  }
 
-    if (result.socialProvisionIncluded) {
-      adjustRowsToCents(rows, result.baseTotal);
-      rows.push({ label: "Cotisations URSSAF (21,5 %)", amount: result.socialProvisionAmount });
-      return rows;
-    }
-
-    return adjustRowsToTotal(rows, result.total);
+  function buildMemoTotals(result) {
+    // Both simulators bill HT and have no VAT calculation.
+    return [
+      "",
+      `Total devis : ${formatInternalCurrency(result.total)}`,
+      `Cotisations URSSAF (21,5 %) : ${formatInternalCurrency(roundCents(result.total * SOCIAL_PROVISION_RATE))}`
+    ];
   }
 
   function buildCopyRowsText(rows) {
@@ -1082,7 +1046,6 @@
     }
 
     lines.push("", "TRAVAUX", ...buildCopyRowsText(buildClientCopyRows(result)));
-    if (!result.socialProvisionIncluded) lines.push("", "Cotisations non incluses");
     lines.push("", `TOTAL ESTIMÉ HT : ${formatCurrency(result.total)}`, "", "Estimation à confirmer après vérification du chantier.");
 
     return lines.join("\n");
@@ -1151,7 +1114,7 @@
       finance(result.feesAmount, result.feesRaw),
       "Prix HT avant provision :",
       formatInternalCurrency(result.baseTotal),
-      result.socialProvisionIncluded ? "Cotisations URSSAF (21,5 %) :" : "Cotisations non incluses :",
+      "Provision intégrée au devis :",
       formatInternalCurrency(result.socialProvisionAmount),
       "TOTAL CLIENT :",
       formatInternalCurrency(result.total),
@@ -1168,7 +1131,8 @@
       "Rentabilité :",
       profitability.status,
       "CHANTIER RENTABLE :",
-      isProfitable
+      isProfitable,
+      ...buildMemoTotals(result)
     );
 
     return lines.join("\n");
@@ -1191,7 +1155,6 @@
       "TRAVAUX",
       ...buildCopyRowsText(buildClientCopyRows(result)),
       "",
-      ...(result.socialProvisionIncluded ? [] : ["Cotisations non incluses", ""]),
       "",
       `TOTAL ESTIMÉ HT : ${formatCurrency(result.total)}`,
       "",
@@ -1229,13 +1192,14 @@
       finance(result.feesAmount, result.feesRaw),
       "Prix HT avant provision :",
       formatInternalCurrency(result.baseTotal),
-      result.socialProvisionIncluded ? "Cotisations URSSAF (21,5 %) :" : "Cotisations non incluses :",
+      "Provision intégrée au devis :",
       formatInternalCurrency(result.socialProvisionAmount),
       "TOTAL CLIENT :",
       formatInternalCurrency(result.total),
       "",
       "RENTABILITÉ",
-      "Non disponible pour le simulateur peinture."
+      "Non disponible pour le simulateur peinture.",
+      ...buildMemoTotals(result)
     ].join("\n");
   }
 
