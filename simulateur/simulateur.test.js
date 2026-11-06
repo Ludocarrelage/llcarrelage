@@ -792,7 +792,7 @@ for (const calculate of [estimate, painting]) {
   assert.strictEqual(withProvision.total, 127.39);
   assert.strictEqual(withProvision.socialProvisionAmount, 27.39);
   assert.strictEqual(withProvision.baseTotal + withProvision.socialProvisionAmount, withProvision.total);
-  assert.strictEqual(buildClientCopyRows(withProvision).at(-1).label, "Cotisations URSSAF (21,5 %)");
+  assert.strictEqual(buildClientCopyRows(withProvision).at(-1).label, "Fournitures");
   assert.strictEqual(Number(buildClientCopyRows(withProvision).reduce((sum, row) => sum + row.amount, 0).toFixed(2)), withProvision.total);
 
   // Recalculate from input for each toggle. No 21.5% can accumulate.
@@ -812,10 +812,59 @@ for (const calculate of [estimate, painting]) {
 }
 
 assert(buildClientCopyText(estimate({ quantity: 0, suppliesEstimate: 100, includeSocialProvision: true })).includes("127,39 €"));
-assert(buildClientCopyText(estimate({ quantity: 0, suppliesEstimate: 100, includeSocialProvision: false })).includes("Cotisations non incluses"));
-assert(buildPaintingClientCopyText(painting({ suppliesEstimate: 100, includeSocialProvision: true })).includes("27,39 €"));
+assert(buildClientCopyText(estimate({ quantity: 0, suppliesEstimate: 100, includeSocialProvision: false })).includes("TOTAL ESTIMÉ HT : 100,00 €"));
+assert(buildPaintingClientCopyText(painting({ suppliesEstimate: 100, includeSocialProvision: true })).includes("127,39 €"));
 const tinyEstimate = estimate({ quantity: 0, suppliesEstimate: 0.2, includeSocialProvision: true });
 assert.strictEqual(tinyEstimate.total, 0.25);
 assert.strictEqual(Number(buildClientCopyRows(tinyEstimate).reduce((sum, row) => sum + row.amount, 0).toFixed(2)), 0.25);
 
+
+const money = (value) => new Intl.NumberFormat("fr-FR", {
+  style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2
+}).format(value);
+for (const includeSocialProvision of [false, true]) {
+  for (const [calculate, clientCopy, memoCopy, scenarios] of [
+    [estimate, buildClientCopyText, buildInternalMemoText, [
+      { quantity: 12.37, tileLengthCm: 120, tileWidthCm: 120, supports: ["notFlat"],
+        removal: "tiles", removalSurface: 3.7, prep: ["primer", "sanding"],
+        prepSurfaces: { primer: 6.3, sanding: 2.1 }, siliconeEnabled: true, siliconeLength: 4.7 },
+      { quantity: 0 }, { projectType: "brokenTiles", quantity: 2, prep: ["primer"], prepSurfaces: { primer: 0.01 } }
+    ]],
+    [painting, buildPaintingClientCopyText, buildPaintingInternalMemoText, [
+      { wallsSurface: 12.37, wallPaint: { enabled: true, surface: 12.37 },
+        wallPrimer: { enabled: true, surface: 12.37 }, interiorDoors: { enabled: true, quantity: 2 },
+        baseboards: { enabled: true, length: 3.7 } },
+      {}, { ceilingSurface: 3.3, ceilingPack: { enabled: true, surface: 3.3 } }
+    ]]
+  ]) {
+    for (const scenario of scenarios) {
+      const quote = calculate({ ...scenario, suppliesEstimate: 123.45,
+        travelCost: 17.23, otherCost: 0.01, marginRate: 0.1, includeSocialProvision });
+      const original = JSON.stringify(quote);
+      const rows = buildClientCopyRows(quote);
+      const client = clientCopy(quote);
+      const memo = memoCopy(quote);
+      assert(!/URSSAF|21,5\s*%|cotisations|provision/i.test(client));
+      assert(!/€\//.test(client), "reference unit prices must not contradict billed rows");
+      assert.strictEqual(rows.reduce((sum, row) => sum + Math.round(row.amount * 100), 0), Math.round(quote.total * 100));
+      assert(rows.every((row) => row.amount >= 0));
+      assert(client.includes("TOTAL ESTIMÉ HT : " + money(quote.total)));
+      assert(memo.endsWith("Total devis : " + money(quote.total) +
+        "\nCotisations URSSAF (21,5 %) : " + money(Math.round((quote.total * 0.215 + Number.EPSILON) * 100) / 100)));
+      assert(!/Reste après URSSAF|Bénéfice après URSSAF|Montant net après cotisations/.test(memo));
+      assert.strictEqual(JSON.stringify(quote), original, "copy must not mutate calculations");
+      const base = calculate({ ...quote.state, includeSocialProvision: false });
+      assert.strictEqual(quote.total, includeSocialProvision ? applySocialProvision(quote.baseTotalRaw, true).total : base.total);
+    }
+  }
+}
+// Equal fractional shares, a very small last row, and zero-valued descriptions.
+const fractional = {
+  detailLines: [{ label: "A - 1 m² x 1 €/m²", rawAmount: 1, amount: 1 },
+    { label: "B - 1 ml x 1 €/ml", rawAmount: 1, amount: 1 },
+    { label: "C", rawAmount: 0.001, amount: 0 }, { label: "Sans supplément", rawAmount: 0, amount: 0 }],
+  laborRaw: 2.001, marginRaw: 0, suppliesRaw: 0, feesRaw: 0, total: 2.55
+};
+assert.deepStrictEqual(buildClientCopyRows(fractional).map((row) => row.amount), [1.28, 1.27, 0, 0]);
+assert.strictEqual(buildClientCopyRows(fractional).length, 4);
 console.log("simulateur tests OK");
