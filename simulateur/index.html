@@ -10,8 +10,8 @@
   <title>Estimation rapide chantier | LL Carrelage</title>
   <link rel="icon" type="image/png" href="/images/favicon-ll-carrelage-conception.png" />
   <link rel="stylesheet" href="/simulateur/style.css?v=20261106b" />
-  <script src="/simulateur/profit-engine.js?v=20261106c" defer></script>
-  <script src="/simulateur/simulateur.js?v=20261106c" defer></script>
+  <script src="/simulateur/profit-engine.js?v=20261106d" defer></script>
+  <script src="/simulateur/simulateur.js?v=20261106d" defer></script>
 </head>
 <body>
   <main class="estimator-shell" id="simulateur-prive">
@@ -368,7 +368,7 @@
             <option value="glueAndGrout">Je fournis colle + joints</option>
             <option value="allSupplies">Je fournis tout</option>
           </select>
-          <label class="field-label" for="suppliesEstimate">Montant facturé au client pour les fournitures</label>
+          <label class="field-label" for="suppliesEstimate">Matériaux / fournitures : coût d’achat refacturé sans marge</label>
           <div class="input-with-unit">
             <input id="suppliesEstimate" type="number" min="0" step="1" inputmode="decimal" value="0" />
             <span>€</span>
@@ -432,7 +432,7 @@
           <summary>
           <strong>14. RENTABILITÉ — À COMPLÉTER</strong>
           </summary>
-          <p class="section-note">Montants facturés récupérés automatiquement. Les prix de vente ne sont pas des dépenses. Complétez chaque coût réel, avec 0 si aucun ; les coûts du chantier ne sont pas sauvegardés.</p>
+          <p class="section-note">Matériaux, déplacement et autres frais sont repris du devis comme coûts réels, une seule fois. Les dépenses supplémentaires ci-dessous restent uniquement internes et ne sont pas ajoutées au devis. La durée et les dépenses du chantier ne sont pas sauvegardées.</p>
           <div class="profit-cost-grid">
           <div>
           <label class="field-label" for="monthlyFixed">Frais fixes mensuels (€)</label>
@@ -461,23 +461,26 @@
           <div>
           <p data-materials-hint class="section-note"></p>
           <label class="field-label" for="realSuppliesCost">Matériaux, colle et joints : coût réel total (€)</label>
-          <input id="realSuppliesCost" data-profit="realSuppliesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <input id="realSuppliesCost" data-profit="realSuppliesCost" readonly type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
           <label class="field-label" for="realTravelCost">Déplacement et carburant réels (€)</label>
-          <input id="realTravelCost" data-profit="realTravelCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <input id="realTravelCost" data-profit="realTravelCost" readonly type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
           <label class="field-label" for="consumablesCost">Consommables réels (€)</label>
-          <input id="consumablesCost" data-profit="consumablesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <input id="consumablesCost" value="0" data-profit="consumablesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
           <label class="field-label" for="wasteCost">Déchetterie / évacuation (€)</label>
-          <input id="wasteCost" data-profit="wasteCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <input id="wasteCost" value="0" data-profit="wasteCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
-          <label class="field-label" for="otherRealCost">Autres coûts directs réels (€)</label>
-          <input id="otherRealCost" data-profit="otherRealCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <label class="field-label" for="otherRealCost">Autres frais repris du devis (€)</label>
+          <input id="otherRealCost" data-profit="otherRealCost" readonly type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div><div>
+          <label class="field-label" for="internalOtherCost">Autres dépenses uniquement internes (€)</label>
+          <input id="internalOtherCost" data-profit="internalOtherCost" type="number" min="0" step="0.01" inputmode="decimal" value="0" />
           </div>
           </div>
           <p>Cotisations : 21,5 % du CA HT, même sans provision. Estimation avant impôt sur le revenu.</p>
@@ -871,7 +874,7 @@
                 <span class="option-price">Montant manuel</span>
               </label>
             </div>
-            <label class="field-label" for="paintSuppliesEstimate">Montant facturé pour les fournitures</label>
+            <label class="field-label" for="paintSuppliesEstimate">Matériaux / fournitures : coût d’achat refacturé sans marge</label>
             <div class="input-with-unit compact-unit">
               <input id="paintSuppliesEstimate" type="number" min="0" step="1" inputmode="decimal" value="0" />
               <span>€</span>
@@ -935,7 +938,7 @@
           <summary>
           <strong>14. RENTABILITÉ — À COMPLÉTER</strong>
           </summary>
-          <p class="section-note">Montants facturés récupérés automatiquement. Les prix de vente ne sont pas des dépenses. Complétez chaque coût réel, avec 0 si aucun ; les coûts du chantier ne sont pas sauvegardés.</p>
+          <p class="section-note">Matériaux, déplacement et autres frais sont repris du devis comme coûts réels, une seule fois. Les dépenses supplémentaires ci-dessous restent uniquement internes et ne sont pas ajoutées au devis. La durée et les dépenses du chantier ne sont pas sauvegardées.</p>
           <div class="profit-cost-grid">
           <div>
           <label class="field-label" for="paintMonthlyFixed">Frais fixes mensuels (€)</label>
@@ -964,23 +967,26 @@
           <div>
           <p data-materials-hint class="section-note"></p>
           <label class="field-label" for="paintRealSuppliesCost">Matériaux, colle et joints : coût réel total (€)</label>
-          <input id="paintRealSuppliesCost" data-profit="realSuppliesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <input id="paintRealSuppliesCost" data-profit="realSuppliesCost" readonly type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
           <label class="field-label" for="paintRealTravelCost">Déplacement et carburant réels (€)</label>
-          <input id="paintRealTravelCost" data-profit="realTravelCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <input id="paintRealTravelCost" data-profit="realTravelCost" readonly type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
           <label class="field-label" for="paintConsumablesCost">Consommables réels (€)</label>
-          <input id="paintConsumablesCost" data-profit="consumablesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <input id="paintConsumablesCost" value="0" data-profit="consumablesCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
           <label class="field-label" for="paintWasteCost">Déchetterie / évacuation (€)</label>
-          <input id="paintWasteCost" data-profit="wasteCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <input id="paintWasteCost" value="0" data-profit="wasteCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
           </div>
           <div>
-          <label class="field-label" for="paintOtherRealCost">Autres coûts directs réels (€)</label>
-          <input id="paintOtherRealCost" data-profit="otherRealCost" type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          <label class="field-label" for="paintOtherRealCost">Autres frais repris du devis (€)</label>
+          <input id="paintOtherRealCost" data-profit="otherRealCost" readonly type="number" min="0" step="0.01" inputmode="decimal" placeholder="À renseigner (0 si aucun)" />
+          </div><div>
+          <label class="field-label" for="paintInternalOtherCost">Autres dépenses uniquement internes (€)</label>
+          <input id="paintInternalOtherCost" data-profit="internalOtherCost" type="number" min="0" step="0.01" inputmode="decimal" value="0" />
           </div>
           </div>
           <p>Cotisations : 21,5 % du CA HT, même sans provision. Estimation avant impôt sur le revenu.</p>
