@@ -24,6 +24,7 @@ const {
 function estimate(overrides) {
   return calculateEstimate({
     projectType: "interior",
+    suppliesType: "allSupplies",
     quantity: 40,
     tileLengthCm: 0,
     tileWidthCm: 0,
@@ -62,7 +63,7 @@ function painting(overrides) {
     interiorDoors: { enabled: false, quantity: 0 },
     radiators: { enabled: false, quantity: 0 },
     baseboards: { enabled: false, length: 0 },
-    suppliesType: "client",
+    suppliesType: "artisan",
     suppliesEstimate: 0,
     travelCost: 0,
     otherCost: 0,
@@ -872,7 +873,7 @@ console.log("simulateur tests OK");
 // Shared job accounting: exact money, explicit missing costs, and reversible pricing.
 const engine = require('./profit-engine.js');
 const { analyzeJob, adjustJob } = require('./simulateur.js');
-const job = {monthlyFixed:300,billableDays:15,jobDays:4,targetDaily:250,hoursPerDay:7,safetyPercent:0,
+const job = {monthlyFixed:300,billableDays:15,jobDays:4,targetDaily:250,hoursPerDay:7,safetyPercent:0,internalOtherCost:0,
   realSuppliesCost:100,realTravelCost:20,consumablesCost:10,wasteCost:0,otherRealCost:0};
 for (const [make, clientCopy, memoCopy] of [
   [estimate,buildClientCopyText,buildInternalMemoText],
@@ -893,13 +894,14 @@ for (const [make, clientCopy, memoCopy] of [
     assert(!/URSSAF|cotisations|rentabilité|objectif/i.test(clientCopy(adjusted)));
     assert(memoCopy(adjusted).includes('Résultat estimé avant impôt : 1 000,01 €'));
     assert.strictEqual(JSON.stringify(initial),original);
-    assert.strictEqual(analyzeJob(initial,{...job,realTravelCost:''}),null);
+    assert.strictEqual(analyzeJob(initial,{...job,realTravelCost:''}).costs.travel,20);
     assert.strictEqual(analyzeJob(initial,{...job,jobDays:0}),null);
     assert.strictEqual(analyzeJob(initial,{...job,billableDays:0}),null);
     assert.strictEqual(analyzeJob(initial,{...job,hoursPerDay:NaN}),null);
     assert.strictEqual(adjustJob({...initial,total:2000},job).total,2000);
     const shared=engine.calculate({price:initial.total,direct:130,monthlyFixed:300,billableDays:15,jobDays:4,targetDaily:250,hours:28});
-    assert.deepStrictEqual(analyzeJob(initial,job),shared);
+    const {costs, ...accounting} = analyzeJob(initial,job);
+    assert.deepStrictEqual(accounting,shared);
   }
 }
 console.log('integrated profitability tests OK');
@@ -907,12 +909,12 @@ console.log('integrated profitability tests OK');
 assert.deepStrictEqual(engine.settings(null), {monthlyFixed:300,billableDays:20,targetDaily:150,hoursPerDay:7,safetyPercent:10});
 assert.deepStrictEqual(engine.settings({monthlyFixed:500,targetDaily:200,hoursPerDay:8,safetyPercent:0,billableDays:18}), {monthlyFixed:500,targetDaily:200,hoursPerDay:8,safetyPercent:0,billableDays:18});
 assert.strictEqual(engine.settings({billableDays:0}).billableDays,20);
-const defaultsJob={...engine.defaults,jobDays:4,realSuppliesCost:100,realTravelCost:20,consumablesCost:10,wasteCost:0,otherRealCost:0};
+const defaultsJob={...engine.defaults,jobDays:4,internalOtherCost:0,realSuppliesCost:100,realTravelCost:20,consumablesCost:10,wasteCost:0,otherRealCost:0};
 for (const [make,copy,memo,artisan,client] of [
   [estimate,buildClientCopyText,buildInternalMemoText,'allSupplies','clientAll'],
   [painting,buildPaintingClientCopyText,buildPaintingInternalMemoText,'artisan','client']
 ]) {
- const quote=make({quantity:10,wallPaint:{enabled:true,surface:10},suppliesType:artisan,includeSocialProvision:true});
+ const quote=make({quantity:10,wallPaint:{enabled:true,surface:10},suppliesType:artisan,suppliesEstimate:100,travelCost:20,includeSocialProvision:true});
  const analysis=analyzeJob({...quote,total:1500},defaultsJob);
  assert.strictEqual(analysis.fixed,60);
  assert.strictEqual(analysis.reserve,13);
@@ -931,9 +933,56 @@ for (const [make,copy,memo,artisan,client] of [
  const clientQuote={...quote,state:{...quote.state,suppliesType:client}};
  assert.strictEqual(analyzeJob(clientQuote,{...defaultsJob,realSuppliesCost:''}).direct,30);
  assert.strictEqual(analyzeJob(clientQuote,defaultsJob).reserve,3);
- assert.strictEqual(analyzeJob(quote,{...defaultsJob,realSuppliesCost:''}),null);
+ assert.strictEqual(analyzeJob(quote,{...defaultsJob,realSuppliesCost:''}).costs.materials,100);
  assert.strictEqual(analyzeJob({...clientQuote,state:{...clientQuote.state,suppliesType:artisan}},defaultsJob).direct,130);
  assert.strictEqual(analyzeJob(quote,{...defaultsJob,jobDays:''}),null);
  assert.strictEqual(analyzeJob(quote,{...defaultsJob,safetyPercent:''}),null);
 }
 console.log('defaults, supply synchronization and safety reserve tests OK');
+
+const syncParams={...engine.defaults,jobDays:4,consumablesCost:0,wasteCost:0,internalOtherCost:0};
+const {getJobCosts}=require('./simulateur.js');
+for(const [make,copy,memo,artisan,client] of [
+ [estimate,buildClientCopyText,buildInternalMemoText,'allSupplies','clientAll'],
+ [painting,buildPaintingClientCopyText,buildPaintingInternalMemoText,'artisan','client']
+]) {
+ for(const includeSocialProvision of [false,true]) {
+  const state={quantity:10,wallPaint:{enabled:true,surface:10},suppliesType:artisan,suppliesEstimate:350,travelCost:40,otherCost:0,includeSocialProvision};
+  const quote=make(state), r=analyzeJob(quote,syncParams);
+  assert.strictEqual(quote.suppliesRaw,350); assert.strictEqual(quote.feesRaw,40);
+  assert.deepStrictEqual(getJobCosts(quote.state),{realSuppliesCost:350,realTravelCost:40,otherRealCost:0});
+  assert.strictEqual(r.direct,390); assert.strictEqual(r.reserve,39); assert.strictEqual(r.fixed,60);
+  assert.strictEqual(r.result,Math.round((quote.total-r.social-390-39-60)*100)/100);
+  assert.strictEqual(r.daily,r.result/4);
+  assert.strictEqual(r.social,Math.round(quote.total*21.5)/100);
+  // Read-only copies of costs can never override the source quote.
+  assert.strictEqual(analyzeJob(quote,{...syncParams,realSuppliesCost:999,realTravelCost:999,otherRealCost:999}).direct,390);
+  const adjusted=adjustJob(quote,syncParams);
+  assert.strictEqual(adjusted.total,1387.27); assert.strictEqual(adjusted.jobAnalysis.result,600.01);
+  assert.strictEqual(adjustJob(adjusted,syncParams).total,1387.27);
+  assert.strictEqual(buildClientCopyRows(adjusted).reduce((sum,row)=>sum+Math.round(row.amount*100),0),138727);
+  assert(!/URSSAF|coût réel|résultat|rentabilité|objectif/i.test(copy(adjusted)));
+  assert(memo(adjusted).includes('Coût réel des matériaux : 350,00 €'));
+  assert(memo(adjusted).includes('Coût réel des déplacements : 40,00 €'));
+  const noTravel=make({...state,travelCost:0});
+  assert.strictEqual(noTravel.feesRaw,0); assert.strictEqual(analyzeJob(noTravel,syncParams).direct,350);
+  const clientQuote=make({...state,suppliesType:client});
+  assert.strictEqual(clientQuote.suppliesRaw,0); assert.strictEqual(analyzeJob(clientQuote,syncParams).direct,40);
+  assert(!buildClientCopyRows(clientQuote).some(row=>row.label==='Fournitures'));
+  assert.strictEqual(analyzeJob(make({...state,suppliesEstimate:400}),syncParams).direct,440);
+  const fees=make({...state,otherCost:25});
+  assert.strictEqual(analyzeJob(fees,syncParams).direct,415);
+  assert.strictEqual(analyzeJob(fees,{...syncParams,internalOtherCost:15,consumablesCost:10,wasteCost:5}).direct,445);
+  assert.strictEqual(fees.total,make({...state,otherCost:25}).total,'internal-only costs do not change quote');
+  assert.strictEqual(analyzeJob(quote,{...syncParams,jobDays:''}),null);
+ }
+}
+console.log('quote-to-profit cost synchronization tests OK');
+for(const make of [estimate,painting]) {
+ const quote=make({quantity:10,wallPaint:{enabled:true,surface:10},suppliesType:make===estimate?'allSupplies':'artisan',suppliesEstimate:350,travelCost:40,includeSocialProvision:true});
+ const adjusted=adjustJob(quote,syncParams);
+ for(const label of ['Fournitures','Déplacement / frais']) assert.strictEqual(buildClientCopyRows(adjusted).find(row=>row.label===label).amount,buildClientCopyRows(quote).find(row=>row.label===label).amount,'adjustment must only increase services');
+ const suppliesOnly=make({quantity:0,suppliesType:make===estimate?'allSupplies':'artisan',suppliesEstimate:350});
+ assert.strictEqual(adjustJob(suppliesOnly,syncParams).total,suppliesOnly.total,'no service to adjust');
+}
+console.log('service-only adjustment tests OK');

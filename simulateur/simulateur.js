@@ -647,7 +647,7 @@
     const marginRate = isBrokenTiles ? 0 : state.marginRate;
     const marginAmount = laborSubtotal > 0 ? laborSubtotal * marginRate : 0;
 
-    const suppliesAmount = state.suppliesEstimate;
+    const suppliesAmount = getJobCosts(state).realSuppliesCost;
     const feesAmount = state.travelCost + state.otherCost;
     const total = laborSubtotal + marginAmount + suppliesAmount + feesAmount;
     const social = applySocialProvision(total, state.includeSocialProvision);
@@ -842,7 +842,7 @@
     }
 
     const marginAmount = laborSubtotal > 0 ? laborSubtotal * state.marginRate : 0;
-    const suppliesAmount = state.suppliesEstimate;
+    const suppliesAmount = getJobCosts(state).realSuppliesCost;
     const feesAmount = state.travelCost + state.otherCost;
     const total = laborSubtotal + marginAmount + suppliesAmount + feesAmount;
     const social = applySocialProvision(total, state.includeSocialProvision);
@@ -992,6 +992,19 @@
   }
 
   function buildClientCopyRows(result) {
+    if (result.initialTotal != null && result.total > result.initialTotal) {
+      const {initialTotal, ...original} = result;
+      const baseRows = buildClientCopyRows({...original, total: initialTotal});
+      const isLabor = row => !["Fournitures", "Déplacement / frais"].includes(row.label);
+      const labor = baseRows.filter(isLabor);
+      if (labor.some(row => row.amount > 0)) {
+        const adjusted = distributeClientRows(labor, labor.reduce((sum, row) => sum + row.amount, 0) + result.total - initialTotal);
+        let index = 0;
+        return baseRows.map(row => isLabor(row) ? adjusted[index++] : row);
+      }
+      // Without labor there is no service price to adjust.
+      return baseRows;
+    }
     // Use unrounded billable amounts as weights; margin belongs to labor.
     const laborFactor = result.laborRaw > 0 ? 1 + result.marginRaw / result.laborRaw : 1;
     const rows = result.detailLines.filter((line) => !isFinanceLine(line)).map((line) => ({
@@ -1001,11 +1014,15 @@
     if (result.suppliesRaw > 0) rows.push({ label: "Fournitures", amount: result.suppliesRaw });
     if (result.feesRaw > 0) rows.push({ label: "Déplacement / frais", amount: result.feesRaw });
 
+    return distributeClientRows(rows, result.total);
+  }
+
+  function distributeClientRows(rows, total) {
     const source = rows.reduce((sum, row) => sum + row.amount, 0);
     if (source <= 0) return rows.map((row) => ({ ...row, amount: 0 }));
 
     // Largest remainders in integer cents: no negative residual on a small last row.
-    const targetCents = Math.round(result.total * 100);
+    const targetCents = Math.round(total * 100);
     const shares = rows.map((row, index) => {
       const exact = row.amount / source * targetCents;
       return { index, cents: Math.floor(exact), remainder: exact - Math.floor(exact) };
@@ -1016,19 +1033,29 @@
     return rows.map((row, index) => ({ label: row.label, amount: shares[index].cents / 100 }));
   }
 
+  // Quote fields are pass-through purchase costs, as configured by the business.
+  // Internal-only expenses remain separate and never change the quoted price.
+  function getJobCosts(state) {
+    return {
+      realSuppliesCost: ["glueAndGrout", "allSupplies", "artisan"].includes(state.suppliesType) ? numberValue(state.suppliesEstimate) : 0,
+      realTravelCost: numberValue(state.travelCost),
+      otherRealCost: numberValue(state.otherCost)
+    };
+  }
+
   function analyzeJob(result, params) {
-    const clientSupplies = ["clientAll", "client"].includes(result.state?.suppliesType);
-    const input = {...params, realSuppliesCost: clientSupplies ? 0 : params.realSuppliesCost};
-    const required = ["monthlyFixed", "billableDays", "targetDaily", "jobDays", "hoursPerDay", "safetyPercent", "realSuppliesCost", "realTravelCost", "consumablesCost", "wasteCost", "otherRealCost"];
+    const input = {...params, ...getJobCosts(result.state)};
+    const required = ["monthlyFixed", "billableDays", "targetDaily", "jobDays", "hoursPerDay", "safetyPercent", "realSuppliesCost", "realTravelCost", "consumablesCost", "wasteCost", "otherRealCost", "internalOtherCost"];
     if (required.some(key => input[key] === "" || input[key] == null || !Number.isFinite(Number(input[key])) || Number(input[key]) < 0) || +input.jobDays <= 0 || +input.billableDays <= 0 || +input.hoursPerDay <= 0) return null;
     const values = Object.fromEntries(required.map(key => [key, Number(input[key])]));
-    return profitEngine.calculate({...values, price: result.total, hours: values.hoursPerDay * values.jobDays, safetyRate: values.safetyPercent / 100,
-      direct: values.realSuppliesCost + values.realTravelCost + values.consumablesCost + values.wasteCost + values.otherRealCost});
+    const analysis = profitEngine.calculate({...values, price: result.total, hours: values.hoursPerDay * values.jobDays, safetyRate: values.safetyPercent / 100,
+      direct: values.realSuppliesCost + values.realTravelCost + values.consumablesCost + values.wasteCost + values.otherRealCost + values.internalOtherCost});
+    return {...analysis, costs: {materials: values.realSuppliesCost, travel: values.realTravelCost, otherBilled: values.otherRealCost, consumables: values.consumablesCost, waste: values.wasteCost, otherInternal: values.internalOtherCost}};
   }
 
   function adjustJob(result, params) {
     const analysis = analyzeJob(result, params);
-    if (!analysis || result.total <= 0) return result;
+    if (!analysis || result.total <= 0 || result.laborRaw <= 0) return result;
     const total = Math.max(result.total, analysis.targetPrice);
     return {...result, initialTotal: result.initialTotal ?? result.total, total,
       low: roundCents(total * 0.95), high: roundCents(total * 1.1), jobAnalysis: analyzeJob({...result, total}, params)};
@@ -1037,6 +1064,7 @@
   function jobAnalysisLines(r) {
     return [
       `Prix du devis : ${formatInternalCurrency(r.price)}`,
+      ...(r.costs ? [`Coût réel des matériaux : ${formatInternalCurrency(r.costs.materials)}`, `Coût réel des déplacements : ${formatInternalCurrency(r.costs.travel)}`, `Autres frais refacturés : ${formatInternalCurrency(r.costs.otherBilled)}`, `Consommables : ${formatInternalCurrency(r.costs.consumables)}`, `Évacuation : ${formatInternalCurrency(r.costs.waste)}`, `Autres dépenses internes : ${formatInternalCurrency(r.costs.otherInternal)}`] : []),
       `Coûts directs réels : ${formatInternalCurrency(r.direct)}`,
       `Réserve de sécurité : ${formatInternalCurrency(r.reserve)}`,
       `Frais fixes affectés : ${formatInternalCurrency(r.fixed)}`,
@@ -1244,6 +1272,7 @@
 
   if (typeof module !== "undefined" && module.exports) {
     module.exports = {
+      getJobCosts,
       analyzeJob,
       adjustJob,
       calculateEstimate,
@@ -1306,7 +1335,7 @@
     let saved = {};
     try { saved = JSON.parse(window.localStorage.getItem("ll-job-profit-settings-v1") || "{}"); } catch (_) {}
     document.querySelector(`[data-profit-prefix="${prefix}"]`).querySelectorAll("[data-profit]").forEach(input => {
-      input.value = Object.hasOwn(profitEngine.defaults, input.dataset.profit) ? profitEngine.settings(saved)[input.dataset.profit] : "";
+      input.value = Object.hasOwn(profitEngine.defaults, input.dataset.profit) ? profitEngine.settings(saved)[input.dataset.profit] : (["consumablesCost", "wasteCost", "internalOtherCost"].includes(input.dataset.profit) ? "0" : "");
     });
   }
   function renderAdjustedJob(result, prefix) {
@@ -1331,12 +1360,17 @@
   }
   function integrateJob(result, prefix) {
     const section = document.querySelector(`[data-profit-prefix="${prefix}"]`);
-    const materials = section.querySelector('[data-profit="realSuppliesCost"]');
+    const costs = getJobCosts(result.state);
+    Object.entries(costs).forEach(([key, value]) => {
+      const input = section.querySelector(`[data-profit="${key}"]`);
+      input.value = value;
+      input.readOnly = true;
+      input.disabled = false;
+    });
     const clientSupplies = ["clientAll", "client"].includes(result.state.suppliesType);
-    materials.disabled = clientSupplies;
     section.querySelector("[data-materials-hint]").textContent = clientSupplies
-      ? "Le client fournit les matériaux : aucun achat de ces matériaux imputé à l’entreprise. Les consommables et autres dépenses restent à renseigner."
-      : "L’entreprise fournit des matériaux : renseignez leur coût réel d’achat, distinct du prix facturé. Le coût déjà saisi est réutilisé.";
+      ? "Matériaux fournis par le client : 0 € facturé et 0 € de coût d’achat pour l’entreprise."
+      : "Matériaux, déplacement et autres frais : coûts réels repris automatiquement du devis, sans ressaisie.";
     const params = jobParams(prefix);
     if (jobAdjustments[prefix]) result = adjustJob(result, params);
     result.jobAnalysis = analyzeJob(result, params);
@@ -1369,9 +1403,9 @@
     document.querySelectorAll("[data-profit-adjust], [data-profit-undo]").forEach(button => button.addEventListener("click", () => {
       const prefix = button.dataset.profitAdjust ?? button.dataset.profitUndo;
       const current = prefix ? lastPaintingCalculation : lastCalculation;
-      if (button.hasAttribute("data-profit-adjust") && (!analyzeJob(current, jobParams(prefix)) || current.total <= 0)) {
+      if (button.hasAttribute("data-profit-adjust") && (!analyzeJob(current, jobParams(prefix)) || current.total <= 0 || current.laborRaw <= 0)) {
         document.querySelector(`[data-profit-prefix="${prefix}"]`).open = true;
-        if (current.total <= 0) document.getElementById(prefix ? "paintIntegratedProfitOutput" : "integratedProfitOutput").textContent = "Renseignez au moins une prestation facturée avant l’ajustement.";
+        if (current.total <= 0 || current.laborRaw <= 0) document.getElementById(prefix ? "paintIntegratedProfitOutput" : "integratedProfitOutput").textContent = "Renseignez au moins une prestation facturée avant l’ajustement.";
         return;
       }
       jobAdjustments[prefix] = button.hasAttribute("data-profit-adjust");
