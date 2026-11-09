@@ -1,0 +1,10 @@
+/* Conserver le montage complet, ses proportions et ses mentions avant / après. */
+.bathroom-renovation-photo {
+  max-width: 760px;
+  margin-inline: auto;
+}
+
+.bathroom-renovation-photo img {
+  width: 100%;
+  height: auto;
+}
