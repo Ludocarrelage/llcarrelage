@@ -1,0 +1,63 @@
+/* Portfolio : composants isolés, identité et typographie du site conservées. */
+.pf-home-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: clamp(28px, 4vw, 64px); align-items: start; }
+.pf-card { min-width: 0; }
+.pf-card .pf-image { border-radius: 12px; }
+.pf-image { display: block; position: relative; overflow: hidden; background: #e6e8e4; border-radius: 10px; }
+.pf-image img { display: block; width: 100%; height: auto; transition: transform .3s ease; }
+.pf-image:hover img { transform: scale(1.015); }
+.pf-enlarge { position: absolute; bottom: 16px; right: 16px; background: #213136; color: #fff; padding: 9px 14px; border-radius: 6px; font-size: .8rem; }
+.pf-card-copy { padding-top: 24px; }
+.pf-card-copy h3 { font-size: clamp(1.4rem, 2.3vw, 2rem); letter-spacing: -.03em; line-height: 1.15; margin: 10px 0 16px; }
+.pf-card-copy > p:not(.eyebrow) { line-height: 1.7; max-width: 560px; color: var(--muted); }
+.pf-home .pf-card-copy > p:not(.eyebrow) { color: #d5dedb; }
+.pf-home .eyebrow { color: var(--accent-light); }
+.pf-card-copy .text-link { margin-top: 20px; }
+.pf-home .pf-card:not(.pf-feature) { padding-top: 72px; }
+.pf-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 24px; margin-top: 48px; }
+.pf-home .pf-actions { padding-top: 32px; border-top: 1px solid #425055; }
+.pf-page main { padding-top: 88px; }
+.pf-intro { padding-bottom: 28px !important; max-width: 1100px; }
+.pf-intro .text-link { margin-bottom: 32px; }
+.pf-intro h1 { font-size: clamp(2.6rem, 5.5vw, 5rem); line-height: 1.04; letter-spacing: -.045em; margin: 16px 0 24px; text-wrap: balance; }
+.pf-intro .section-text { max-width: 720px; }
+.pf-index { padding-top: 28px !important; }
+.pf-project-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: clamp(28px,4vw,64px); }
+.pf-story { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(28px,6vw,100px); }
+.pf-story h2, .pf-gallery-section h2, .pf-cta h2 { font-size: clamp(1.8rem,3vw,2.8rem); letter-spacing: -.03em; margin-bottom: 20px; }
+.pf-story p, .pf-story li, .pf-gallery-section > p, .pf-cta p { line-height: 1.75; color: var(--muted); }
+.pf-story ul { padding-left: 20px; margin-bottom: 24px; }
+.pf-story li + li { margin-top: 12px; }
+.pf-gallery-section { background: #213136; color: #fff; }
+.pf-gallery-section > p { color: #d5dedb; margin-bottom: 32px; }
+.pf-gallery { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 32px; align-items: start; }
+.pf-gallery figure { margin: 0; min-width: 0; }
+.pf-gallery figcaption { padding-top: 12px; font-size: .9rem; line-height: 1.6; color: #d5dedb; }
+.pf-cta { background: #eee6da; }
+.pf-cta .btn { margin-top: 24px; }
+.pf-skip { position: fixed; top: -100px; left: 16px; z-index: 1000; background: #fff; padding: 16px; }
+.pf-skip:focus { top: 16px; }
+.pf-image:focus-visible, .pf-dialog button:focus-visible { outline: 3px solid var(--accent-light); outline-offset: 5px; }
+.pf-dialog { width: min(1100px, calc(100vw - 24px)); max-width: none; max-height: calc(100dvh - 24px); margin: auto; padding: 0; border: 1px solid #5b6b6e; border-radius: 12px; background: #16272c; color: #fff; }
+.pf-dialog::backdrop { background: rgba(8,18,21,.9); }
+.pf-viewer { padding: 16px; }
+.pf-close { display: block; margin-left: auto; }
+.pf-dialog button { min-height: 44px; padding: 10px 16px; border-radius: 6px; border: 1px solid #788784; background: #213136; color: #fff; cursor: pointer; font: inherit; }
+.pf-dialog figure { margin: 16px 0; }
+.pf-dialog img { display: block; width: 100%; height: min(68dvh,900px); object-fit: contain; }
+.pf-dialog figcaption { margin-top: 12px; line-height: 1.5; text-align: center; }
+.pf-controls { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.pf-controls button[hidden] { display: none; }
+@media(max-width:700px) {
+ .pf-home-grid, .pf-project-grid, .pf-story, .pf-gallery { grid-template-columns: minmax(0,1fr); }
+ .pf-home .pf-card:not(.pf-feature) { padding-top: 0; }
+ .pf-home-grid { gap: 48px; }
+ .pf-project-grid { gap: 48px; }
+ .pf-actions { align-items: flex-start; flex-direction: column; gap: 24px; }
+ .pf-dialog { max-height: calc(100dvh - 16px); }
+ .pf-dialog img { height: 60dvh; }
+ .pf-controls { flex-wrap: wrap; }
+ .pf-dialog button { font-size: .85rem; padding: 10px; }
+}
+@media(prefers-reduced-motion:reduce) { .pf-image img { transition: none; } .pf-image:hover img { transform: none; } }
+/* Garder le titre visible sous la navigation fixe après un lien vers la section. */
+#realisations.pf-home { scroll-margin-top: 88px; }
