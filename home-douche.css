@@ -10,19 +10,3 @@
   position: static;
   border-radius: 0;
 }
-.home-page .home-shower-comparison .realisations-grid {
-  grid-template-columns: minmax(0, 1fr);
-  max-width: 760px;
-  margin-inline: auto;
-}
-.home-page .home-shower-comparison .realisations-card:first-child {
-  grid-column: auto;
-  grid-row: auto;
-}
-.home-page .home-shower-comparison .realisations-card:first-child picture {
-  height: auto;
-  min-height: 0;
-}
-.home-page .home-shower-comparison .realisations-card img {
-  height: auto;
-}
