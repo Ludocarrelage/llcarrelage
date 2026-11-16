@@ -3,7 +3,11 @@ RewriteEngine On
 # Ancien calculateur indépendant : utiliser la rentabilité intégrée.
 RewriteRule ^simulateur/rentabilite\.html$ https://llcarrelage.fr/simulateur/ [R=301,L]
 
-# Retirer index.html uniquement sur les 8 pages publiques.
+# Normaliser les URL des zones : slash final et retrait de index.html.
+RewriteCond %{THE_REQUEST} \s/+zones-intervention(?:/carreleur-[a-z-]+)?(?:/index\.html)?[?\s]
+RewriteRule ^(zones-intervention(?:/carreleur-[a-z-]+)?)(?:/index\.html)?$ https://llcarrelage.fr/$1/ [R=301,L]
+
+# Retirer index.html sur l’accueil et les pages de prestations.
 RewriteCond %{THE_REQUEST} \s/+[^?\s]*index\.html[?\s]
 RewriteRule ^((?:carrelage-sol-mur|carrelage-terrasse|carrelage-salle-de-bain|douche-italienne|faience|depose-carrelage|ragreage-sol)/)?index\.html$ https://llcarrelage.fr/$1 [R=301,L]
 
